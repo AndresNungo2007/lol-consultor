@@ -6,12 +6,14 @@ import dash_bootstrap_components as dbc
 from dash import Dash, Input, Output, dcc, html
 
 from lol_consultor import config
-from lol_consultor.app.pages import champions, items, runes
+from lol_consultor.app.pages import champions, chat, items, runes
+from lol_consultor.assistant import LoLAssistant
 from lol_consultor.service import LoLService
 
 
-def create_app(service: LoLService | None = None) -> Dash:
+def create_app(service: LoLService | None = None, assistant: LoLAssistant | None = None) -> Dash:
     service = service or LoLService()
+    assistant = assistant or LoLAssistant(service)
 
     app = Dash(
         __name__,
@@ -36,6 +38,7 @@ def create_app(service: LoLService | None = None) -> Dash:
                     dbc.Tab(champions.layout(service), label="Campeones"),
                     dbc.Tab(items.layout(service), label="Ítems"),
                     dbc.Tab(runes.layout(service), label="Runas"),
+                    dbc.Tab(chat.layout(assistant), label="Asistente IA"),
                 ]
             ),
         ],
@@ -45,6 +48,7 @@ def create_app(service: LoLService | None = None) -> Dash:
 
     champions.register_callbacks(app, service)
     items.register_callbacks(app, service)
+    chat.register_callbacks(app, assistant)
 
     @app.callback(Output("patch-banner", "children"), Input("patch-check-interval", "n_intervals"))
     def _check_patch(_n_intervals: int) -> str:

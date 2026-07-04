@@ -108,6 +108,9 @@ class StubDDragon:
     def __init__(self, version: str) -> None:
         self.version = version
 
+    def champion(self, champion_id: str) -> dict:
+        return SAMPLE_CHAMPION_DETAIL["data"][champion_id]
+
     def champion_square_url(self, full: str) -> str:
         return f"http://x/{full}"
 
@@ -127,6 +130,22 @@ class StubDDragon:
         return f"http://x/{icon_path}"
 
 
+class _StubOpgg:
+    def champion_meta(self, champion_key: int, **_kwargs):
+        from lol_consultor.models import ChampionMeta, CounterEntry, PositionMeta
+
+        counters = [CounterEntry(champion_id=166, games=2312, wins=1110)]
+        position = PositionMeta(
+            position="MID", play_rate=8.8, win_rate=51.0, ban_rate=3.3, counters=counters
+        )
+        return ChampionMeta(champion_id=champion_key, positions=[position])
+
+
+class _StubWiki:
+    def champion_patch_history(self, _name: str) -> str:
+        return "V14.20: cambio de balance"
+
+
 class StubService:
     """Sustituye a LoLService en tests: misma interfaz, sin red."""
 
@@ -138,6 +157,8 @@ class StubService:
         self._items = items
         self._runes = runes
         self.ddragon = StubDDragon(version)
+        self.opgg = _StubOpgg()
+        self.wiki = _StubWiki()
 
     def champion_list(self):
         return list(self._champion_list["data"].values())
@@ -174,3 +195,22 @@ def stub_service(
     return StubService(
         sample_champion_list, sample_champion_detail, sample_items, sample_runes, sample_version
     )
+
+
+@pytest.fixture
+def stub_assistant(stub_service):
+    """LoLAssistant con cliente Ollama falso (sin red), listo para usar en la UI."""
+    from types import SimpleNamespace
+
+    from lol_consultor.assistant import LoLAssistant
+
+    class _FakeClient:
+        def list(self):
+            return SimpleNamespace(models=[SimpleNamespace(model="qwen3:8b")])
+
+        def chat(self, model, messages, tools, think):
+            return SimpleNamespace(
+                message=SimpleNamespace(content="respuesta de prueba", tool_calls=None)
+            )
+
+    return LoLAssistant(stub_service, model="qwen3:8b", client=_FakeClient())

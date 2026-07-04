@@ -171,7 +171,9 @@ def register_callbacks(app: Dash, service: LoLService) -> None:
                 _ability_card(
                     slot,
                     spell["name"],
-                    spell.get("tooltip") or spell.get("description"),
+                    # 'description' es prosa limpia; 'tooltip' trae placeholders
+                    # sin resolver tipo {{ qdamage }} (limitación de Data Dragon).
+                    spell.get("description") or spell.get("tooltip"),
                     ddragon.spell_icon_url(spell["image"]["full"]),
                     extra=f"Enfriamiento: {spell.get('cooldownBurn', '-')}s",
                 )

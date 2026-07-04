@@ -6,41 +6,68 @@ import dash_bootstrap_components as dbc
 from dash import Dash, Input, Output, dcc, html
 
 from lol_consultor.service import LoLService
-from lol_consultor.textutil import strip_tags
+from lol_consultor.textutil import item_description_sections
 
 _TAG_LABELS = {
-    "Damage": "Daño de ataque",
-    "SpellDamage": "Poder de habilidad",
-    "Health": "Salud",
+    "AbilityHaste": "Aceleración de habilidades",
+    "Active": "Activa",
     "Armor": "Armadura",
-    "SpellBlock": "Resistencia mágica",
+    "ArmorPenetration": "Penetración de armadura",
     "AttackSpeed": "Velocidad de ataque",
-    "CriticalStrike": "Golpe crítico",
-    "Mana": "Maná",
+    "Aura": "Aura",
     "Boots": "Botas",
+    "Consumable": "Consumible",
+    "CooldownReduction": "Reducción de enfriamiento",
+    "CriticalStrike": "Golpe crítico",
+    "Damage": "Daño de ataque",
+    "GoldPer": "Generación de oro",
+    "Health": "Salud",
+    "HealthRegen": "Regeneración de vida",
+    "Jungle": "Jungla",
+    "Lane": "Línea",
     "LifeSteal": "Robo de vida",
-    "SpellVamp": "Vampirismo de habilidad",
+    "MagicPenetration": "Penetración mágica",
+    "MagicResist": "Resistencia mágica",
+    "Mana": "Maná",
+    "ManaRegen": "Regeneración de maná",
+    "NonbootsMovement": "Velocidad de movimiento",
     "OnHit": "Al golpear",
     "Slow": "Ralentización",
+    "SpellBlock": "Resistencia mágica",
+    "SpellDamage": "Poder de habilidad",
+    "SpellVamp": "Vampirismo de hechizos",
+    "Stealth": "Sigilo",
     "Tenacity": "Tenacidad",
+    "Trinket": "Baratija",
+    "Vision": "Visión",
 }
 
 
 def _item_card(item_id: str, item: dict, icon_url: str) -> dbc.Card:
+    stats, effects = item_description_sections(item.get("description"))
     tags = ", ".join(_TAG_LABELS.get(t, t) for t in item.get("tags", []))
+
+    body: list = [
+        html.H6(item["name"]),
+        html.P(f"{item['gold']['total']} de oro", className="small text-warning mb-1"),
+    ]
+    if stats:
+        body.append(
+            html.Ul(
+                [html.Li(stat) for stat in stats],
+                className="small ps-3 mb-2",
+            )
+        )
+    for effect in effects[:3]:
+        body.append(html.P(effect[:220], className="small mb-1"))
+    body.append(html.P(tags, className="small text-muted mt-2 mb-0"))
+
     return dbc.Card(
         [
             dbc.CardImg(src=icon_url, top=True, style={"width": "64px", "margin": "8px auto"}),
-            dbc.CardBody(
-                [
-                    html.H6(item["name"]),
-                    html.P(f"{item['gold']['total']} de oro", className="small text-warning mb-1"),
-                    html.P(strip_tags(item.get("description"))[:280], className="small"),
-                    html.P(tags, className="small text-muted"),
-                ]
-            ),
+            dbc.CardBody(body),
         ],
-        style={"width": "220px"},
+        style={"width": "240px"},
         class_name="m-2",
     )
 
