@@ -15,6 +15,7 @@ dependencies = [
     "dash-bootstrap-components>=1.6",
     "plotly>=5.22",
     "opgg.py>=2.0.4",
+    "ollama>=0.5",
     "python-dotenv>=1.0",
 ]
 

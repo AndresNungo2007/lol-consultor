@@ -1,8 +1,9 @@
 # LoL Consultor
 
 Interfaz de consulta (Dash) de League of Legends: campeones, ítems, runas,
-estilo de juego y meta/counters. Se mantiene actualizada sola: cachea por
-parche y revisa periódicamente si Riot publicó uno nuevo.
+estilo de juego, meta/counters y un asistente de chat con IA local. Se
+mantiene actualizada sola: cachea por parche y revisa periódicamente si Riot
+publicó uno nuevo.
 
 ## Fuentes de datos
 
@@ -41,6 +42,25 @@ Abre `http://localhost:8050`.
 Variables de entorno disponibles en [.env.example](.env.example) (cópialo a
 `.env` para sobreescribir defaults).
 
+## Asistente IA (chat)
+
+La pestaña "Asistente IA" permite preguntar en lenguaje natural ("¿quién
+counterea a Yasuo?", "¿qué ítems dan robo de vida?"). Usa un LLM **local y
+gratuito** vía [Ollama](https://ollama.com) con tool use: el modelo decide qué
+consultar y la app ejecuta esas consultas contra las fuentes de datos.
+
+Requisitos (una sola vez):
+
+```bash
+# 1. Instalar Ollama (Windows: winget install Ollama.Ollama)
+# 2. Descargar el modelo (~5 GB; corre bien con GPU de 8+ GB VRAM)
+ollama pull qwen3:8b
+```
+
+Si Ollama no está corriendo, la pestaña muestra instrucciones en vez de
+romperse. El modelo y host se configuran con `LOL_OLLAMA_MODEL` y
+`LOL_OLLAMA_HOST`.
+
 ## Tests y calidad
 
 ```bash
@@ -63,8 +83,9 @@ src/lol_consultor/
 ├── connectors/       # un conector por fuente externa (ddragon, fandom_wiki, opgg_meta)
 ├── cache.py          # cache genérico en disco con TTL (wiki, op.gg)
 ├── models.py         # dataclasses tipadas para los datos de op.gg
-├── service.py         # fachada que combina los conectores para la UI
-└── app/               # app Dash (factory + páginas por pestaña)
+├── service.py        # fachada que combina los conectores para la UI
+├── assistant.py      # chat IA local (Ollama + tool use sobre LoLService)
+└── app/              # app Dash (factory + páginas por pestaña)
 ```
 
 ## Aviso legal

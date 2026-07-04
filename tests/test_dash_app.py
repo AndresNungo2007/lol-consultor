@@ -8,8 +8,8 @@ from lol_consultor.models import ChampionMeta, CounterEntry, PositionMeta
 from lol_consultor.service import ChampionDetail
 
 
-def test_create_app_builds_layout_without_errors(stub_service):
-    app = create_app(service=stub_service)
+def test_create_app_builds_layout_without_errors(stub_service, stub_assistant):
+    app = create_app(service=stub_service, assistant=stub_assistant)
 
     assert app.layout is not None
 
