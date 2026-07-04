@@ -15,9 +15,10 @@ _WELCOME = (
 
 
 def _bubble(role: str, text: str) -> html.Div:
+    content: str | dcc.Markdown
     if role == "user":
         classes = "bg-primary text-white ms-auto"
-        content: object = text
+        content = text
     else:
         classes = "bg-secondary bg-opacity-25"
         # el modelo responde en markdown (negritas, listas): renderizarlo
