@@ -41,3 +41,31 @@ def test_get_or_set_recovers_from_corrupted_cache_file(tmp_path):
     result = cache.get_or_set("key", ttl_seconds=3600, fetch_fn=lambda: {"ok": True})
 
     assert result == {"ok": True}
+
+
+def test_get_or_set_force_refetches_fresh_entries(tmp_path):
+    cache = TTLCache(tmp_path)
+    calls = []
+
+    def fetch():
+        calls.append(1)
+        return {"n": len(calls)}
+
+    cache.get_or_set("key", ttl_seconds=3600, fetch_fn=fetch)
+    result = cache.get_or_set("key", ttl_seconds=3600, fetch_fn=fetch, force=True)
+
+    assert len(calls) == 2  # force ignora el cache vigente
+    assert result == {"n": 2}
+
+
+def test_clear_removes_all_entries(tmp_path):
+    cache = TTLCache(tmp_path)
+    cache.get_or_set("a", ttl_seconds=3600, fetch_fn=lambda: 1)
+    cache.get_or_set("b", ttl_seconds=3600, fetch_fn=lambda: 2)
+
+    removed = cache.clear()
+
+    assert removed == 2
+    calls = []
+    cache.get_or_set("a", ttl_seconds=3600, fetch_fn=lambda: calls.append(1) or 1)
+    assert calls  # tras clear, se vuelve a descargar
