@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.lol_cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+dist/
+build/
+
+# Cache/logs propios de la librería opgg.py (runtime, no del proyecto)
+cache/
+logs/
+
+# Config local de Claude Code (permisos específicos de esta máquina)
+.claude/settings.local.json

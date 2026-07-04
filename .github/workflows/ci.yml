@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Instalar dependencias
+        run: pip install -e ".[dev]"
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Mypy (tipos)
+        run: mypy src
+
+      - name: Pytest
+        run: pytest --cov=lol_consultor --cov-report=term-missing
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir imagen
+        run: docker build -t lol-consultor:ci .
