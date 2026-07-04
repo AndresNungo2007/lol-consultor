@@ -29,9 +29,16 @@ _MAX_TOOL_ROUNDS = 6
 
 _SYSTEM_PROMPT = (
     "Eres un asistente experto en League of Legends. Respondes SIEMPRE en español, "
-    "de forma concreta y breve. Usa las herramientas disponibles para consultar datos "
-    "reales (campeones, habilidades, counters, ítems, runas, parches) antes de responder; "
-    "no inventes cifras. Si una herramienta no devuelve datos, dilo claramente. "
+    "de forma concreta y breve.\n"
+    "REGLA OBLIGATORIA: nunca respondas de memoria. Antes de responder llama a la "
+    "herramienta correspondiente y basa tu respuesta EXCLUSIVAMENTE en lo que devuelva:\n"
+    "- Mecánicas del juego (tenacidad, armadura, penetración, omnivamp, CC, oro, visión...) "
+    "-> explicar_dinamica\n"
+    "- Qué campeón elegir/pickear en un draft -> analizar_draft\n"
+    "- Campeones y habilidades -> detalle_campeon | counters y winrates -> meta_campeon\n"
+    "- Ítems -> buscar_items | runas -> arboles_runas | cambios de balance -> historial_parches\n"
+    "Si la herramienta contradice lo que creías, la herramienta tiene razón. "
+    "Si una herramienta no devuelve datos, dilo claramente; no inventes cifras. "
     "Los counters provienen de op.gg (comunidad) y el resto de datos oficiales de Riot."
 )
 
@@ -224,8 +231,10 @@ class LoLAssistant:
 
     def _run_tool_loop(self, messages: list[Any]) -> str:
         for _ in range(_MAX_TOOL_ROUNDS):
+            # think=True mejora la selección de tools y la aritmética del modelo
+            # (el razonamiento viaja aparte, no contamina la respuesta).
             response = self.client.chat(
-                model=self.model, messages=messages, tools=_TOOL_SCHEMAS, think=False
+                model=self.model, messages=messages, tools=_TOOL_SCHEMAS, think=True
             )
             message = response.message
             if not message.tool_calls:

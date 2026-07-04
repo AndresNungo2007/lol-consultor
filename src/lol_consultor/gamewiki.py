@@ -147,10 +147,14 @@ MECANICAS: list[Mecanica] = [
         categoria="Control",
         texto=(
             "Reduce la DURACIÓN del control de masas que recibes: aturdimientos, ralentizaciones, "
-            "enraizamientos, silencios, etc. NO reduce: knockups/desplazamientos (la R de Malphite "
-            "dura lo mismo con o sin tenacidad), supresiones (R de Malzahar/Warwick) ni el daño. "
+            "enraizamientos, silencios, etc. NO reduce el daño, y NO afecta: "
+            "knockups/desplazamientos (la R de Malphite dura lo mismo con o sin tenacidad) ni "
+            "supresiones (R de Malzahar/Warwick). "
             "Fuentes: Mercuriales (botas), runa Leyenda: Tenacidad, Elixir de hierro. "
-            "Varias fuentes se combinan multiplicativamente, no se suman."
+            "Varias fuentes se combinan MULTIPLICATIVAMENTE, no se suman: la duración restante "
+            "se multiplica. Ejemplo: con 30%, 20% y 20% de tenacidad, la duración del CC es "
+            "0.70 x 0.80 x 0.80 = 0.448, es decir 44.8% de la duración original, equivalente a "
+            "55.2% de tenacidad total (no 70%)."
         ),
     ),
     Mecanica(

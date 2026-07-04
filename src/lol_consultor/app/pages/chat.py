@@ -15,12 +15,16 @@ _WELCOME = (
 
 
 def _bubble(role: str, text: str) -> html.Div:
+    content: str | dcc.Markdown
     if role == "user":
         classes = "bg-primary text-white ms-auto"
+        content = text
     else:
         classes = "bg-secondary bg-opacity-25"
+        # el modelo responde en markdown (negritas, listas): renderizarlo
+        content = dcc.Markdown(text, className="mb-0")
     return html.Div(
-        text,
+        content,
         className=f"rounded p-2 px-3 my-1 {classes}",
         style={"maxWidth": "80%", "whiteSpace": "pre-wrap", "width": "fit-content"},
     )
