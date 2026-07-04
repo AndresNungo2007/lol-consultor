@@ -26,6 +26,9 @@ OPGG_CACHE_TTL: int = _int_env("LOL_OPGG_CACHE_TTL", 6 * 3600)
 # Cada cuánto revisa la app si hay parche nuevo de Data Dragon (milisegundos).
 PATCH_CHECK_INTERVAL_MS: int = _int_env("LOL_PATCH_CHECK_INTERVAL_MS", 30 * 60 * 1000)
 
+# Refresco proactivo en segundo plano (segundos). 0 = desactivado.
+REFRESH_INTERVAL_S: int = _int_env("LOL_REFRESH_INTERVAL_S", 3600)
+
 # Asistente de chat (LLM local vía Ollama).
 OLLAMA_HOST: str = os.getenv("LOL_OLLAMA_HOST", "http://127.0.0.1:11434")
 OLLAMA_MODEL: str = os.getenv("LOL_OLLAMA_MODEL", "qwen3:8b")

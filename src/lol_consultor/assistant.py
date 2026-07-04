@@ -39,6 +39,9 @@ _SYSTEM_PROMPT = (
     "- Ítems -> buscar_items | runas -> arboles_runas | cambios de balance -> historial_parches\n"
     "Si la herramienta contradice lo que creías, la herramienta tiene razón. "
     "Si una herramienta no devuelve datos, dilo claramente; no inventes cifras. "
+    "Si preguntan por detalles mecánicos finos (resets, interacciones, cifras exactas) que "
+    "la descripción oficial no menciona, responde que la descripción no lo especifica en vez "
+    "de afirmarlo o negarlo categóricamente. "
     "Los counters provienen de op.gg (comunidad) y el resto de datos oficiales de Riot."
 )
 

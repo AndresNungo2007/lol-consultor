@@ -31,13 +31,17 @@ class LoLService:
         timeout: int = config.HTTP_TIMEOUT,
     ) -> None:
         self.ddragon = DDragonConnector(lang=lang, cache_dir=cache_dir, timeout=timeout)
-        ttl_cache = TTLCache(Path(cache_dir) / "_ttl")
-        self.wiki = FandomWikiConnector(ttl_cache, config.WIKI_CACHE_TTL, timeout=timeout)
-        self.opgg = OpggMetaConnector(ttl_cache, config.OPGG_CACHE_TTL)
+        self.ttl_cache = TTLCache(Path(cache_dir) / "_ttl")
+        self.wiki = FandomWikiConnector(self.ttl_cache, config.WIKI_CACHE_TTL, timeout=timeout)
+        self.opgg = OpggMetaConnector(self.ttl_cache, config.OPGG_CACHE_TTL)
 
     def check_for_new_patch(self) -> bool:
         """True si Data Dragon publicó un parche nuevo desde la última consulta."""
         return self.ddragon.check_for_new_patch()
+
+    def clear_meta_caches(self) -> int:
+        """Invalida los caches TTL (wiki y op.gg). Devuelve cuántas entradas borró."""
+        return self.ttl_cache.clear()
 
     def champion_list(self) -> list[dict[str, Any]]:
         """Campeones ordenados alfabéticamente, con sus datos básicos."""
@@ -77,15 +81,30 @@ class LoLService:
         return self.ddragon.items()
 
     def legendary_items(self) -> list[dict[str, Any]]:
-        """Ítems completos (>=2500 oro, sin upgrade posterior)."""
-        return sorted(
+        """
+        Ítems completos (>=2500 oro, sin upgrade posterior) de la Grieta del
+        Invocador. Data Dragon trae variantes del mismo ítem por mapa/modo
+        (ARAM, Arena...) con IDs distintos: se filtra por mapa 11 y se
+        deduplica por nombre para no mostrar repetidos.
+        """
+        candidates = sorted(
             (
                 item
                 for item in self.ddragon.items().values()
-                if item.get("gold", {}).get("total", 0) >= 2500 and not item.get("into")
+                if item.get("gold", {}).get("total", 0) >= 2500
+                and not item.get("into")
+                and item.get("maps", {}).get("11", False)
+                and item.get("gold", {}).get("purchasable", True)
             ),
             key=lambda i: -i["gold"]["total"],
         )
+        seen: set[str] = set()
+        unique = []
+        for item in candidates:
+            if item["name"] not in seen:
+                seen.add(item["name"])
+                unique.append(item)
+        return unique
 
     def rune_trees(self) -> list[dict[str, Any]]:
         return self.ddragon.runes()

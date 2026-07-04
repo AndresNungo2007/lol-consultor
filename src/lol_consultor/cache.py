@@ -24,10 +24,19 @@ class TTLCache:
         safe_key = key.replace("/", "_").replace(":", "_")
         return self.cache_dir / f"{safe_key}.json"
 
-    def get_or_set(self, key: str, ttl_seconds: int, fetch_fn: Callable[[], Any]) -> Any:
-        """Devuelve el valor cacheado si no expiró; si no, llama a fetch_fn y cachea."""
+    def get_or_set(
+        self,
+        key: str,
+        ttl_seconds: int,
+        fetch_fn: Callable[[], Any],
+        force: bool = False,
+    ) -> Any:
+        """
+        Devuelve el valor cacheado si no expiró; si no, llama a fetch_fn y cachea.
+        force=True ignora el cache y siempre vuelve a descargar (refresco proactivo).
+        """
         path = self._path(key)
-        if path.exists():
+        if not force and path.exists():
             try:
                 envelope = json.loads(path.read_text(encoding="utf-8"))
                 if time.time() - envelope["fetched_at"] < ttl_seconds:
@@ -39,3 +48,11 @@ class TTLCache:
         envelope = {"fetched_at": time.time(), "data": data}
         path.write_text(json.dumps(envelope, ensure_ascii=False), encoding="utf-8")
         return data
+
+    def clear(self) -> int:
+        """Elimina todas las entradas. Devuelve cuántas se borraron."""
+        removed = 0
+        for entry in self.cache_dir.glob("*.json"):
+            entry.unlink(missing_ok=True)
+            removed += 1
+        return removed

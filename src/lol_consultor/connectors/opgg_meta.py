@@ -38,7 +38,7 @@ class OpggMetaConnector:
         self.ttl_seconds = ttl_seconds
 
     def _fetch_all_stats(
-        self, tier: Tier, queue: Queue
+        self, tier: Tier, queue: Queue, force: bool = False
     ) -> list[dict[str, Any]] | None:
         def fetch() -> list[dict[str, Any]]:
             client = OPGG()
@@ -48,10 +48,16 @@ class OpggMetaConnector:
 
         cache_key = f"opgg_stats_{tier.value}_{queue.value}"
         try:
-            return self.cache.get_or_set(cache_key, self.ttl_seconds, fetch)
+            return self.cache.get_or_set(cache_key, self.ttl_seconds, fetch, force=force)
         except Exception:
             logger.warning("op.gg no disponible, se omiten counters/meta", exc_info=True)
             return None
+
+    def refresh_stats(
+        self, tier: Tier = Tier.EMERALD_PLUS, queue: Queue = Queue.SOLO
+    ) -> bool:
+        """Fuerza la re-descarga de estadísticas. True si op.gg respondió."""
+        return self._fetch_all_stats(tier, queue, force=True) is not None
 
     def champion_meta(
         self,

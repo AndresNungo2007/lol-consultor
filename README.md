@@ -42,6 +42,32 @@ Abre `http://localhost:8050`.
 Variables de entorno disponibles en [.env.example](.env.example) (cópialo a
 `.env` para sobreescribir defaults).
 
+## Rutinas de actualización
+
+Tres capas mantienen los datos al día:
+
+1. **Cache por parche y TTL (siempre activo):** Data Dragon se cachea por
+   versión de parche; wiki (24 h) y op.gg (6 h) por TTL. Al vencer, se
+   refrescan en la siguiente consulta.
+2. **Refresher en segundo plano (mientras la app corre):** cada
+   `LOL_REFRESH_INTERVAL_S` segundos (default 1 h) la app detecta parches
+   nuevos (e invalida todos los caches si lo hay), pre-descarga campeones,
+   ítems, runas y hechizos, fuerza la actualización del meta de op.gg y
+   pre-calienta el pool del usuario.
+3. **Script programable (con la app cerrada):**
+
+   ```bash
+   python scripts/refresh_data.py            # ciclo estándar
+   python scripts/refresh_data.py --completo # + detalle de los ~170 campeones
+   ```
+
+   Para programarlo cada hora en Windows (ajusta las rutas):
+
+   ```bat
+   schtasks /Create /SC HOURLY /TN "LoLConsultor Refresh" ^
+     /TR "\"C:\ruta\.venv\Scripts\python.exe\" \"C:\ruta\scripts\refresh_data.py\""
+   ```
+
 ## Análisis de draft
 
 La pestaña "Análisis de draft" recomienda qué campeón elegir de tu pool según
