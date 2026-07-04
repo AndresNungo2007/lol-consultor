@@ -18,6 +18,8 @@ from typing import Any
 from ollama import Client
 
 from lol_consultor import config
+from lol_consultor.draft import DraftAnalyzer
+from lol_consultor.gamewiki import MECANICAS, buscar_mecanica
 from lol_consultor.service import LoLService
 from lol_consultor.textutil import item_description_sections, strip_tags
 
@@ -115,6 +117,48 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "analizar_draft",
+            "description": (
+                "Recomienda qué campeón elegir del pool del usuario según los picks de "
+                "aliados y enemigos (meta, counters, balance AP/AD, composición). "
+                "Úsala cuando pregunten qué campeón conviene elegir/pickear."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "enemigos": {
+                        "type": "string",
+                        "description": "Enemigos separados por coma, ej. 'Yasuo, Lee Sin'",
+                    },
+                    "aliados": {
+                        "type": "string",
+                        "description": "Campeones aliados separados por coma (opcional)",
+                    },
+                },
+                "required": ["enemigos"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "explicar_dinamica",
+            "description": (
+                "Explica una mecánica del juego: armadura, resistencia mágica, penetración, "
+                "omnivampirismo, tenacidad, tipos de CC, visión, oro, experiencia, etc."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "termino": {"type": "string", "description": "Mecánica a explicar"}
+                },
+                "required": ["termino"],
+            },
+        },
+    },
 ]
 
 
@@ -125,10 +169,12 @@ class LoLAssistant:
         model: str = config.OLLAMA_MODEL,
         host: str = config.OLLAMA_HOST,
         client: Any | None = None,
+        analyzer: DraftAnalyzer | None = None,
     ) -> None:
         self.service = service
         self.model = model
         self.client = client or Client(host=host)
+        self.analyzer = analyzer or DraftAnalyzer(service)
 
     # ---------- disponibilidad ----------
 
@@ -203,6 +249,8 @@ class LoLAssistant:
             "buscar_items": self._buscar_items,
             "arboles_runas": self._arboles_runas,
             "historial_parches": self._historial_parches,
+            "analizar_draft": self._analizar_draft,
+            "explicar_dinamica": self._explicar_dinamica,
         }
         handler = handlers.get(name)
         if handler is None:
@@ -216,15 +264,7 @@ class LoLAssistant:
             return f"Error consultando datos con {name}."
 
     def _find_champion(self, nombre: str) -> dict[str, Any] | None:
-        needle = nombre.strip().lower()
-        champs = self.service.champion_list()
-        for c in champs:
-            if c["id"].lower() == needle or c["name"].lower() == needle:
-                return c
-        for c in champs:
-            if needle in c["name"].lower() or needle in c["id"].lower():
-                return c
-        return None
+        return self.service.find_champion(nombre)
 
     def _listar_campeones(self) -> str:
         names = [c["name"] for c in self.service.champion_list()]
@@ -309,3 +349,31 @@ class LoLAssistant:
         if not history:
             return f"No hay historial de parches disponible para {champ['name']}."
         return history[:2000]
+
+    def _analizar_draft(self, enemigos: str, aliados: str = "") -> str:
+        enemy_list = [e.strip() for e in enemigos.split(",") if e.strip()]
+        ally_list = [a.strip() for a in aliados.split(",") if a.strip()]
+        recs = self.analyzer.analyze(
+            pool=config.DEFAULT_POOL,
+            role=config.DEFAULT_ROLE,
+            allies=ally_list,
+            enemies=enemy_list,
+        )
+        if not recs:
+            return "No pude analizar el draft (pool vacío o campeones no reconocidos)."
+        lines = [
+            f"Recomendación de pick ({config.DEFAULT_ROLE}, pool: "
+            f"{', '.join(config.DEFAULT_POOL)}):"
+        ]
+        for i, rec in enumerate(recs, start=1):
+            lines.append(f"{i}. {rec.champion_name} (puntaje {rec.score:+.1f})")
+            for factor in rec.factores:
+                lines.append(f"   - {factor.descripcion}")
+        return "\n".join(lines)
+
+    def _explicar_dinamica(self, termino: str) -> str:
+        mecanica = buscar_mecanica(termino)
+        if mecanica is None:
+            disponibles = ", ".join(m.titulo for m in MECANICAS)
+            return f"No tengo esa mecánica documentada. Disponibles: {disponibles}."
+        return f"{mecanica.titulo} ({mecanica.categoria}):\n{mecanica.texto}"
