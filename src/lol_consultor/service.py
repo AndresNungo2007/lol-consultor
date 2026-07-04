@@ -48,6 +48,20 @@ class LoLService:
         """Índice numérico ('key' de Data Dragon) -> datos básicos del campeón."""
         return {int(c["key"]): c for c in self.ddragon.champions().values()}
 
+    def find_champion(self, nombre: str) -> dict[str, Any] | None:
+        """Busca un campeón por id o nombre, tolerante a mayúsculas y coincidencia parcial."""
+        needle = nombre.strip().lower()
+        if not needle:
+            return None
+        champs = self.champion_list()
+        for c in champs:
+            if c["id"].lower() == needle or c["name"].lower() == needle:
+                return c
+        for c in champs:
+            if needle in c["name"].lower() or needle in c["id"].lower():
+                return c
+        return None
+
     def champion_detail(
         self,
         champion_id: str,

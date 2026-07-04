@@ -1,9 +1,9 @@
 # LoL Consultor
 
 Interfaz de consulta (Dash) de League of Legends: campeones, ítems, runas,
-estilo de juego, meta/counters y un asistente de chat con IA local. Se
-mantiene actualizada sola: cachea por parche y revisa periódicamente si Riot
-publicó uno nuevo.
+estilo de juego, meta/counters, análisis de draft, dinámicas del juego y un
+asistente de chat con IA local. Se mantiene actualizada sola: cachea por
+parche y revisa periódicamente si Riot publicó uno nuevo.
 
 ## Fuentes de datos
 
@@ -41,6 +41,25 @@ Abre `http://localhost:8050`.
 
 Variables de entorno disponibles en [.env.example](.env.example) (cópialo a
 `.env` para sobreescribir defaults).
+
+## Análisis de draft
+
+La pestaña "Análisis de draft" recomienda qué campeón elegir de tu pool según
+los picks de aliados y enemigos. El puntaje combina: winrate en el meta
+(op.gg), counters contra los enemigos elegidos, balance de daño AP/AD del
+equipo y aporte de línea de frente. El pool y rol por defecto se configuran
+con `LOL_POOL` (nombres separados por coma) y `LOL_ROLE`
+(TOP/JUNGLE/MID/ADC/SUPPORT).
+
+Nota: no existe fuente pública de sinergias directas entre aliados; la
+"sinergia" se aproxima vía balance de daño y composición.
+
+## Dinámicas del juego
+
+La pestaña "Dinámicas del juego" explica las mecánicas centrales (armadura,
+resistencia mágica, penetración, omnivampirismo, tenacidad, tipos de CC,
+visión, oro, experiencia...) con contenido curado en español. Son reglas
+estables entre parches, por eso viven en el repo y no en una fuente externa.
 
 ## Asistente IA (chat)
 

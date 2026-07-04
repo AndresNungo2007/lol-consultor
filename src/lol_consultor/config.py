@@ -29,3 +29,13 @@ PATCH_CHECK_INTERVAL_MS: int = _int_env("LOL_PATCH_CHECK_INTERVAL_MS", 30 * 60 *
 # Asistente de chat (LLM local vía Ollama).
 OLLAMA_HOST: str = os.getenv("LOL_OLLAMA_HOST", "http://127.0.0.1:11434")
 OLLAMA_MODEL: str = os.getenv("LOL_OLLAMA_MODEL", "qwen3:8b")
+
+# Análisis de draft: pool de campeones del usuario y su rol habitual.
+DEFAULT_POOL: list[str] = [
+    c.strip()
+    for c in os.getenv(
+        "LOL_POOL", "Briar,Udyr,Viego,Karthus,Belveth,Olaf,Ekko"
+    ).split(",")
+    if c.strip()
+]
+DEFAULT_ROLE: str = os.getenv("LOL_ROLE", "JUNGLE")

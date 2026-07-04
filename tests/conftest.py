@@ -166,6 +166,16 @@ class StubService:
     def champions_by_key(self):
         return {int(c["key"]): c for c in self._champion_list["data"].values()}
 
+    def find_champion(self, nombre: str):
+        needle = nombre.strip().lower()
+        for c in self.champion_list():
+            if c["id"].lower() == needle or c["name"].lower() == needle:
+                return c
+        for c in self.champion_list():
+            if needle in c["name"].lower() or needle in c["id"].lower():
+                return c
+        return None
+
     def champion_detail(self, champion_id, **_kwargs):
         from lol_consultor.models import ChampionMeta, CounterEntry, PositionMeta
         from lol_consultor.service import ChampionDetail
