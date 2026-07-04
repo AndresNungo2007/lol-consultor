@@ -1,0 +1,45 @@
+/*
+ * Los dcc.Dropdown de Dash 4 no heredan el tema oscuro de Bootstrap (DARKLY):
+ * el texto seleccionado queda blanco sobre control blanco y parece vacío.
+ * Este archivo fuerza fondo oscuro y texto claro en control, valores y menú.
+ */
+
+.dash-dropdown,
+.dash-dropdown-trigger,
+.dash-dropdown-content {
+    background-color: #303030 !important;
+    color: #f8f9fa !important;
+    border-color: #555 !important;
+}
+
+.dash-dropdown-value,
+.dash-dropdown-value-item,
+.dash-dropdown-placeholder,
+.dash-dropdown-option,
+.dash-dropdown-search input {
+    color: #f8f9fa !important;
+}
+
+.dash-dropdown-placeholder {
+    color: #adb5bd !important;
+}
+
+.dash-dropdown-options,
+.dash-dropdown-search-container {
+    background-color: #303030 !important;
+}
+
+.dash-dropdown-option:hover,
+.dash-dropdown-option[aria-selected="true"] {
+    background-color: #495057 !important;
+}
+
+/* chips de selección múltiple */
+.dash-dropdown-value-item {
+    background-color: #495057 !important;
+    border-color: #6c757d !important;
+}
+
+.dash-dropdown-search input {
+    background-color: transparent !important;
+}
