@@ -14,6 +14,7 @@ from lol_consultor.connectors.ddragon import DDragonConnector
 from lol_consultor.connectors.fandom_wiki import FandomWikiConnector
 from lol_consultor.connectors.opgg_meta import OpggMetaConnector
 from lol_consultor.models import ChampionMeta
+from lol_consultor.winrates import WinrateStore
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,8 @@ class LoLService:
         self.ttl_cache = TTLCache(Path(cache_dir) / "_ttl")
         self.wiki = FandomWikiConnector(self.ttl_cache, config.WIKI_CACHE_TTL, timeout=timeout)
         self.opgg = OpggMetaConnector(self.ttl_cache, config.OPGG_CACHE_TTL)
+        # Winrates propios calculados con la Riot API (scripts/collect_winrates.py).
+        self.winrates = WinrateStore(Path(cache_dir) / "winrates.json")
 
     def check_for_new_patch(self) -> bool:
         """True si Data Dragon publicó un parche nuevo desde la última consulta."""

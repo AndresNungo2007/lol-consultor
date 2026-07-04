@@ -43,7 +43,9 @@ _TAG_LABELS = {
 }
 
 
-def _item_card(item_id: str, item: dict, icon_url: str) -> dbc.Card:
+def _item_card(
+    item_id: str, item: dict, icon_url: str, winrate: tuple[float, int] | None = None
+) -> dbc.Card:
     stats, effects = item_description_sections(item.get("description"))
     tags = ", ".join(_TAG_LABELS.get(t, t) for t in item.get("tags", []))
 
@@ -51,6 +53,15 @@ def _item_card(item_id: str, item: dict, icon_url: str) -> dbc.Card:
         html.H6(item["name"]),
         html.P(f"{item['gold']['total']} de oro", className="small text-warning mb-1"),
     ]
+    if winrate is not None:
+        wr, games = winrate
+        body.append(
+            dbc.Badge(
+                f"WR {wr}% · {games} apariciones",
+                color="success" if wr >= 50 else "secondary",
+                class_name="mb-2",
+            )
+        )
     if stats:
         body.append(
             html.Ul(
@@ -75,8 +86,20 @@ def _item_card(item_id: str, item: dict, icon_url: str) -> dbc.Card:
 def layout(service: LoLService) -> html.Div:
     all_tags = sorted({t for i in service.legendary_items() for t in i.get("tags", [])})
     tag_options = [{"label": _TAG_LABELS.get(t, t), "value": t} for t in all_tags]
+    winrate_note = (
+        dbc.Alert(
+            f"Winrates calculados con la Riot API sobre {service.winrates.total_matches} "
+            "partidas ranked recolectadas. Ojo: comparativos, no causales (el equipo que "
+            "va ganando completa más ítems).",
+            color="info",
+            class_name="small",
+        )
+        if service.winrates.total_matches
+        else None
+    )
     return html.Div(
         [
+            winrate_note or html.Div(),
             dbc.Row(
                 dbc.Col(
                     dcc.Dropdown(
@@ -105,5 +128,6 @@ def register_callbacks(app: Dash, service: LoLService) -> None:
         for item in items:
             item_id = item["image"]["full"].rsplit(".", 1)[0]
             icon_url = service.ddragon.item_icon_url(item_id)
-            cards.append(_item_card(item_id, item, icon_url))
+            winrate = service.winrates.item_winrate(item_id)
+            cards.append(_item_card(item_id, item, icon_url, winrate=winrate))
         return cards

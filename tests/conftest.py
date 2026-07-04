@@ -146,6 +146,16 @@ class _StubWiki:
         return "V14.20: cambio de balance"
 
 
+class _StubWinrates:
+    total_matches = 0
+
+    def item_winrate(self, _item_id):
+        return None
+
+    def keystone_winrate(self, _perk_id):
+        return None
+
+
 class StubService:
     """Sustituye a LoLService en tests: misma interfaz, sin red."""
 
@@ -159,6 +169,7 @@ class StubService:
         self.ddragon = StubDDragon(version)
         self.opgg = _StubOpgg()
         self.wiki = _StubWiki()
+        self.winrates = _StubWinrates()
 
     def champion_list(self):
         return list(self._champion_list["data"].values())
