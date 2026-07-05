@@ -29,7 +29,7 @@ def create_app(service: LoLService | None = None, assistant: LoLAssistant | None
             dbc.Row(
                 dbc.Col(
                     [
-                        html.H2("LoL Consultor"),
+                        html.H2("⚔️ LoL Consultor"),
                         html.Div(id="patch-banner", className="small text-muted mb-2"),
                     ]
                 )
@@ -52,8 +52,9 @@ def create_app(service: LoLService | None = None, assistant: LoLAssistant | None
 
     champions.register_callbacks(app, service)
     items.register_callbacks(app, service)
+    runes.register_callbacks(app, service)
     draft_page.register_callbacks(app, service, analyzer)
-    mechanics.register_callbacks(app)
+    mechanics.register_callbacks(app, service)
     chat.register_callbacks(app, assistant)
 
     @app.callback(Output("patch-banner", "children"), Input("patch-check-interval", "n_intervals"))

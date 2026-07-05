@@ -94,6 +94,24 @@ class LoLWikiConnector:
         cache_key = f"wiki_section_{title}_{'_'.join(sorted(candidates))}"
         return self.cache.get_or_set(cache_key, self.ttl_seconds, fetch)
 
+    def page_intro(self, title: str) -> str | None:
+        """Sección introductoria (lead) de una página, en texto plano."""
+
+        def fetch() -> str | None:
+            content = self._get(
+                {"action": "parse", "page": title, "section": "0", "prop": "text"}
+            )
+            if "error" in content:
+                return None
+            raw_html = content.get("parse", {}).get("text", {}).get("*")
+            return _strip_html(raw_html) if raw_html else None
+
+        return self.cache.get_or_set(f"wiki_intro_{title}", self.ttl_seconds, fetch)
+
+    def page_notes(self, title: str) -> str | None:
+        """Sección 'Notes' de una página (ej. ítems: interacciones y detalles)."""
+        return self.page_section_text(title, {"notes"})
+
     def champion_patch_history(self, champion_english_name: str) -> str | None:
         """Historial de cambios de balance del campeón, al día, en texto plano."""
         return self.page_section_text(champion_english_name, _PATCH_HISTORY_HEADINGS)

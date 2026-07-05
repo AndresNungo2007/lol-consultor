@@ -1,0 +1,146 @@
+/*
+ * Tema "Hextech": paleta inspirada en el cliente de League of Legends.
+ * Azul profundo de fondo, dorado para acentos, cian para datos.
+ */
+
+:root {
+    --hex-bg: #010a13;
+    --hex-panel: #0a1428;
+    --hex-panel-2: #091428;
+    --hex-border: #1e2328;
+    --hex-gold: #c8aa6e;
+    --hex-gold-bright: #f0e6d2;
+    --hex-blue: #0ac8b9;
+    --hex-text: #a09b8c;
+}
+
+body {
+    background: radial-gradient(ellipse at top, #0a1428 0%, #010a13 65%) fixed !important;
+    color: var(--hex-gold-bright) !important;
+}
+
+/* Título principal */
+h2 {
+    color: var(--hex-gold) !important;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: 700;
+    border-bottom: 2px solid var(--hex-gold);
+    padding-bottom: 8px;
+    text-shadow: 0 0 18px rgba(200, 170, 110, 0.35);
+}
+
+h3, h5, h6 {
+    color: var(--hex-gold-bright) !important;
+}
+
+/* Pestañas */
+.nav-tabs {
+    border-bottom: 1px solid var(--hex-gold) !important;
+}
+
+.nav-tabs .nav-link {
+    color: var(--hex-text) !important;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    border: none !important;
+    background: transparent !important;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--hex-gold) !important;
+    background: linear-gradient(180deg, rgba(200, 170, 110, 0.12), transparent) !important;
+    border-bottom: 2px solid var(--hex-gold) !important;
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--hex-gold-bright) !important;
+}
+
+/* Tarjetas */
+.card {
+    background-color: var(--hex-panel) !important;
+    border: 1px solid var(--hex-border) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    border-color: var(--hex-gold) !important;
+    box-shadow: 0 0 14px rgba(200, 170, 110, 0.18);
+}
+
+.card-header {
+    background-color: var(--hex-panel-2) !important;
+    border-bottom: 1px solid var(--hex-gold) !important;
+    color: var(--hex-gold-bright) !important;
+}
+
+/* Botones primarios en dorado hextech */
+.btn-primary {
+    background: linear-gradient(180deg, #c8aa6e, #a1854a) !important;
+    border-color: var(--hex-gold) !important;
+    color: #010a13 !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(180deg, #f0e6d2, #c8aa6e) !important;
+    box-shadow: 0 0 12px rgba(200, 170, 110, 0.5);
+}
+
+/* Alertas informativas en azul hextech */
+.alert-info {
+    background-color: rgba(10, 200, 185, 0.08) !important;
+    border: 1px solid rgba(10, 200, 185, 0.4) !important;
+    color: #9be8e2 !important;
+}
+
+/* Acordeón (dinámicas) */
+.accordion-item {
+    background-color: var(--hex-panel) !important;
+    border: 1px solid var(--hex-border) !important;
+}
+
+.accordion-button {
+    background-color: var(--hex-panel-2) !important;
+    color: var(--hex-gold-bright) !important;
+}
+
+.accordion-button:not(.collapsed) {
+    color: var(--hex-gold) !important;
+    box-shadow: inset 0 -2px 0 var(--hex-gold);
+}
+
+/* Tablas (counters) */
+.table {
+    color: var(--hex-gold-bright) !important;
+}
+
+/* Iconos de campeón/ítem con marco dorado sutil */
+img.rounded, .card-img-top {
+    border: 1px solid var(--hex-border);
+    border-radius: 6px !important;
+}
+
+/* Scrollbars oscuros */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--hex-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3c3c41;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--hex-gold);
+}

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import dash_bootstrap_components as dbc
-from dash import Dash, Input, Output, dcc, html
+from dash import ALL, Dash, Input, Output, ctx, dcc, html, no_update
 
 from lol_consultor.service import LoLService
 from lol_consultor.textutil import item_description_sections
+from lol_consultor.winrates import MIN_GAMES_FOR_DISPLAY
 
 _TAG_LABELS = {
     "AbilityHaste": "Aceleración de habilidades",
@@ -55,12 +56,17 @@ def _item_card(
     ]
     if winrate is not None:
         wr, games = winrate
+        reliable = games >= MIN_GAMES_FOR_DISPLAY
         body.append(
             dbc.Badge(
-                f"WR {wr}% · {games} apariciones",
-                color="success" if wr >= 50 else "secondary",
+                f"WR {wr}% · {games} part." + ("" if reliable else " (muestra baja)"),
+                color=("success" if wr >= 50 else "danger") if reliable else "secondary",
                 class_name="mb-2",
             )
+        )
+    else:
+        body.append(
+            dbc.Badge("sin datos aún", color="dark", class_name="mb-2 text-muted")
         )
     if stats:
         body.append(
@@ -72,6 +78,16 @@ def _item_card(
     for effect in effects[:3]:
         body.append(html.P(effect[:220], className="small mb-1"))
     body.append(html.P(tags, className="small text-muted mt-2 mb-0"))
+    body.append(
+        dbc.Button(
+            "Detalle wiki",
+            id={"type": "item-wiki-btn", "index": item_id},
+            size="sm",
+            outline=True,
+            color="info",
+            class_name="mt-2",
+        )
+    )
 
     return dbc.Card(
         [
@@ -113,6 +129,16 @@ def layout(service: LoLService) -> html.Div:
                 class_name="mb-3",
             ),
             html.Div(id="item-grid", className="d-flex flex-wrap"),
+            dbc.Modal(
+                [
+                    dbc.ModalHeader(dbc.ModalTitle(id="item-wiki-title")),
+                    dbc.ModalBody(dcc.Loading(html.Div(id="item-wiki-body"))),
+                ],
+                id="item-wiki-modal",
+                size="lg",
+                is_open=False,
+                scrollable=True,
+            ),
         ]
     )
 
@@ -128,6 +154,38 @@ def register_callbacks(app: Dash, service: LoLService) -> None:
         for item in items:
             item_id = item["image"]["full"].rsplit(".", 1)[0]
             icon_url = service.ddragon.item_icon_url(item_id)
-            winrate = service.winrates.item_winrate(item_id)
+            winrate = service.winrates.winrate_any("items", item_id)
             cards.append(_item_card(item_id, item, icon_url, winrate=winrate))
         return cards
+
+    @app.callback(
+        Output("item-wiki-modal", "is_open"),
+        Output("item-wiki-title", "children"),
+        Output("item-wiki-body", "children"),
+        Input({"type": "item-wiki-btn", "index": ALL}, "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def _open_wiki(clicks):
+        if not any(c for c in clicks if c):
+            return no_update, no_update, no_update
+        item_id = ctx.triggered_id["index"]
+        item_en = service.ddragon_en.items().get(item_id)
+        if item_en is None:
+            return True, "Ítem", dbc.Alert("Sin página de wiki para este ítem.", color="warning")
+        title = item_en["name"]
+        intro = service.wiki.page_intro(title)
+        notes = service.wiki.page_notes(title)
+        sections: list = []
+        if intro:
+            sections.append(html.Div(intro[:2000], style={"whiteSpace": "pre-wrap"}))
+        if notes:
+            sections.append(html.H6("Notas e interacciones", className="mt-3"))
+            sections.append(html.Div(notes[:3000], style={"whiteSpace": "pre-wrap"}))
+        if not sections:
+            sections.append(
+                dbc.Alert("La wiki no tiene contenido para este ítem.", color="warning")
+            )
+        sections.append(
+            html.P("Fuente: wikilol (EN)", className="small text-muted fst-italic mt-3 mb-0")
+        )
+        return True, title, html.Div(sections, className="small")

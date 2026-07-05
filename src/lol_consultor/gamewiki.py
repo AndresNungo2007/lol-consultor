@@ -16,11 +16,13 @@ class Mecanica:
     titulo: str
     categoria: str
     texto: str
+    wiki_page: str | None = None  # título de página en wiki.leagueoflegends.com
 
 
 MECANICAS: list[Mecanica] = [
     Mecanica(
         id="armadura",
+        wiki_page="Armor",
         titulo="Armadura",
         categoria="Defensa",
         texto=(
@@ -35,6 +37,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="resistencia-magica",
+        wiki_page="Magic resistance",
         titulo="Resistencia mágica",
         categoria="Defensa",
         texto=(
@@ -47,6 +50,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="penetracion",
+        wiki_page="Armor penetration",
         titulo="Penetración y letalidad",
         categoria="Daño",
         texto=(
@@ -62,6 +66,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="golpe-critico",
+        wiki_page="Critical strike",
         titulo="Golpe crítico",
         categoria="Daño",
         texto=(
@@ -73,6 +78,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="velocidad-ataque",
+        wiki_page="Attack speed",
         titulo="Velocidad de ataque",
         categoria="Daño",
         texto=(
@@ -86,6 +92,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="aceleracion-habilidades",
+        wiki_page="Haste",
         titulo="Aceleración de habilidades",
         categoria="Utilidad",
         texto=(
@@ -99,6 +106,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="robo-vida",
+        wiki_page="Life steal",
         titulo="Robo de vida",
         categoria="Sustain",
         texto=(
@@ -109,6 +117,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="omnivampirismo",
+        wiki_page="Omnivamp",
         titulo="Omnivampirismo",
         categoria="Sustain",
         texto=(
@@ -120,6 +129,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="curaciones-escudos",
+        wiki_page="Shield",
         titulo="Curaciones y escudos",
         categoria="Sustain",
         texto=(
@@ -131,6 +141,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="heridas-graves",
+        wiki_page="Grievous Wounds",
         titulo="Heridas graves (antisanación)",
         categoria="Sustain",
         texto=(
@@ -143,6 +154,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="tenacidad",
+        wiki_page="Tenacity",
         titulo="Tenacidad (reducción de CC)",
         categoria="Control",
         texto=(
@@ -159,6 +171,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="tipos-cc",
+        wiki_page="Crowd control",
         titulo="Tipos de control de masas (CC)",
         categoria="Control",
         texto=(
@@ -178,6 +191,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="velocidad-movimiento",
+        wiki_page="Movement speed",
         titulo="Velocidad de movimiento",
         categoria="Utilidad",
         texto=(
@@ -190,6 +204,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="experiencia-niveles",
+        wiki_page="Experience (champion)",
         titulo="Experiencia y niveles",
         categoria="Economía",
         texto=(
@@ -203,6 +218,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="oro-ingresos",
+        wiki_page="Gold",
         titulo="Oro e ingresos",
         categoria="Economía",
         texto=(
@@ -215,6 +231,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="vision",
+        wiki_page="Sight",
         titulo="Visión y wards",
         categoria="Utilidad",
         texto=(
@@ -228,6 +245,7 @@ MECANICAS: list[Mecanica] = [
     ),
     Mecanica(
         id="escalado-stats",
+        wiki_page="Ability power",
         titulo="Escalado y ratios (AP/AD)",
         categoria="Daño",
         texto=(

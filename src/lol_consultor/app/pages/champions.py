@@ -117,6 +117,106 @@ def _meta_section(detail, champions_by_key: dict[int, dict[str, Any]]) -> html.D
     )
 
 
+_SLOT_EMOJIS = {"Pasiva": "🔮", "Q": "⚔️", "W": "🛡️", "E": "💨", "R": "🌟"}
+_BOLD_PREFIXES = ("Active:", "Passive:", "Innate:", "Recast:", "Toggle:")
+
+
+def _ability_text_components(chunk: str) -> list:
+    """Texto plano de la wiki -> párrafos, bullets y sub-encabezados en negrita."""
+    components: list = []
+    bullets: list = []
+
+    def _flush_bullets() -> None:
+        if bullets:
+            components.append(html.Ul(list(bullets), className="small mb-2"))
+            bullets.clear()
+
+    for line in chunk.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("- "):
+            bullets.append(html.Li(line[2:]))
+            continue
+        _flush_bullets()
+        if line.endswith(":") and len(line) < 60:
+            components.append(html.P(html.Strong(line), className="small mb-1 mt-2"))
+        elif line.startswith(_BOLD_PREFIXES):
+            prefix, _, rest = line.partition(":")
+            components.append(
+                html.P([html.Strong(f"{prefix}:"), rest], className="small mb-1")
+            )
+        else:
+            components.append(html.P(line, className="small mb-1"))
+    _flush_bullets()
+    return components
+
+
+def _wiki_abilities_section(detail, service: LoLService, champion_id: str):
+    """Detalle de la wiki partido en una card por habilidad (con iconos y bullets)."""
+    if not detail.wiki_abilities:
+        return dbc.Alert(
+            "Detalle de la wiki no disponible para este campeón.",
+            color="warning",
+            class_name="small",
+        )
+
+    text = detail.wiki_abilities
+    try:
+        data_en = service.ddragon_en.champion(champion_id)
+        ordered = [("Pasiva", data_en["passive"]["name"], None)]
+        for slot, spell in zip("QWER", data_en.get("spells", []), strict=False):
+            ordered.append((slot, spell["name"], spell["image"]["full"]))
+    except Exception:
+        ordered = []
+
+    # localizar el inicio de cada habilidad dentro del texto de la wiki
+    boundaries = []
+    for slot, name, icon in ordered:
+        idx = text.find(name)
+        if idx >= 0:
+            boundaries.append((idx, slot, name, icon))
+    boundaries.sort()
+
+    if not boundaries:
+        return dbc.Card(
+            dbc.CardBody(_ability_text_components(text)), class_name="small"
+        )
+
+    cards = []
+    for i, (idx, slot, name, icon) in enumerate(boundaries):
+        end = boundaries[i + 1][0] if i + 1 < len(boundaries) else len(text)
+        chunk = text[idx + len(name): end]
+        header = html.Div(
+            [
+                html.Img(
+                    src=service.ddragon.spell_icon_url(icon), height="32px", className="me-2"
+                )
+                if icon
+                else html.Span(_SLOT_EMOJIS.get(slot, ""), className="me-2 fs-5"),
+                html.Strong(f"{_SLOT_EMOJIS.get(slot, '')} {slot}: {name}"),
+            ],
+            className="d-flex align-items-center mb-2",
+        )
+        cards.append(
+            dbc.Card(
+                dbc.CardBody([header, *_ability_text_components(chunk)]),
+                class_name="mb-2",
+            )
+        )
+    return html.Div(
+        [
+            dbc.Alert(
+                "Fuente: wikilol (en inglés) — incluye cifras por nivel, resets e "
+                "interacciones que Riot no publica en Data Dragon.",
+                color="info",
+                class_name="small",
+            ),
+            *cards,
+        ]
+    )
+
+
 def register_callbacks(app: Dash, service: LoLService) -> None:
     @app.callback(Output("champion-detail", "children"), Input("champion-dropdown", "value"))
     def _update(champion_id: str | None):
@@ -197,30 +297,7 @@ def register_callbacks(app: Dash, service: LoLService) -> None:
 
         meta_section = _meta_section(detail, service.champions_by_key())
 
-        wiki_abilities_section = (
-            dbc.Card(
-                dbc.CardBody(
-                    [
-                        html.H6("Detalle completo de habilidades (wikilol, en inglés)"),
-                        html.Pre(
-                            detail.wiki_abilities,
-                            style={
-                                "whiteSpace": "pre-wrap",
-                                "maxHeight": "500px",
-                                "overflowY": "auto",
-                            },
-                            className="small",
-                        ),
-                    ]
-                )
-            )
-            if detail.wiki_abilities
-            else dbc.Alert(
-                "Detalle de la wiki no disponible para este campeón.",
-                color="warning",
-                class_name="small",
-            )
-        )
+        wiki_abilities_section = _wiki_abilities_section(detail, service, champion_id)
 
         patch_history_style = {"whiteSpace": "pre-wrap", "maxHeight": "300px", "overflowY": "auto"}
         patch_section = (

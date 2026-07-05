@@ -74,9 +74,18 @@ Tres capas mantienen los datos al día:
 ## Winrates de ítems y runas
 
 No existe fuente pública que exponga winrates por ítem/runa, así que el
-proyecto los **calcula** con la API oficial de Riot: se recolectan partidas
-ranked del ladder y, por cada ítem del build final y cada runa clave, se
-cuenta apariciones vs victorias.
+proyecto los **calcula** con la API oficial de Riot. De cada partida ranked
+del ladder se agregan varias dimensiones: ítems y runas (globales, por
+campeón y contra cada campeón enemigo), winrate por campeón, matchups
+(campeón vs campeón) y dúos (aliados juntos). Con eso el análisis de draft
+estima la **probabilidad de victoria** (combinación de log-odds con
+suavizado bayesiano: con poca muestra tiende al prior en vez de inventar
+extremos) y sugiere **ítems y runas según su éxito contra los enemigos
+elegidos**.
+
+Opciones del recolector: `--desde/--hasta` (ventanas históricas, match-v5
+conserva ~2 años; ojo que ventanas largas mezclan parches) y
+`--plataformas la1,la2,br1,na1` (multi-servidor).
 
 ```bash
 # 1. Key gratuita en https://developer.riotgames.com -> RIOT_API_KEY en .env

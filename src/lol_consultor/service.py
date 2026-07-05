@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,17 @@ from lol_consultor.connectors.lol_wiki import LoLWikiConnector
 from lol_consultor.connectors.opgg_meta import OpggMetaConnector
 from lol_consultor.models import ChampionMeta
 from lol_consultor.winrates import WinrateStore
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_result(future: Future):
+    """Resultado de un future o None si falló (las fuentes externas son opcionales)."""
+    try:
+        return future.result()
+    except Exception:
+        logger.warning("Fuente externa falló", exc_info=True)
+        return None
 
 
 @dataclass(frozen=True)
@@ -94,12 +107,18 @@ class LoLService:
         queue: Queue = Queue.SOLO,
     ) -> ChampionDetail:
         data = self.ddragon.champion(champion_id)
-        meta = self.opgg.champion_meta(int(data["key"]), tier=tier, queue=queue)
         wiki_title = self.english_name(champion_id) or data["name"]
-        patch_history = self.wiki.champion_patch_history(wiki_title)
-        wiki_abilities = self.wiki.champion_abilities(wiki_title)
+        # Tres fuentes independientes: consultarlas en paralelo baja la primera
+        # carga de ~6s a ~2s (después todo sale del cache TTL).
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            meta_f = pool.submit(self.opgg.champion_meta, int(data["key"]), tier=tier, queue=queue)
+            history_f = pool.submit(self.wiki.champion_patch_history, wiki_title)
+            abilities_f = pool.submit(self.wiki.champion_abilities, wiki_title)
         return ChampionDetail(
-            data=data, meta=meta, patch_history=patch_history, wiki_abilities=wiki_abilities
+            data=data,
+            meta=_safe_result(meta_f),
+            patch_history=_safe_result(history_f),
+            wiki_abilities=_safe_result(abilities_f),
         )
 
     def items(self) -> dict[str, Any]:
