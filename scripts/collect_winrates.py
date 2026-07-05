@@ -7,8 +7,9 @@ Requiere RIOT_API_KEY en el entorno o .env. Los agregados crecen con cada
 ejecución. --desde/--hasta permiten recolectar HISTÓRICO (match-v5 conserva
 ~2 años); --plataformas recolecta de varios servidores en una pasada.
 
-Nota: mezclar ventanas muy largas mezcla parches y metas distintas; para
-comparar ítems del parche actual conviene recolectar ventanas recientes.
+Por defecto solo se recolecta historia de 2026 en adelante (--desde
+2026-01-01): mezclar temporadas viejas mezcla parches, metas e ítems que ya
+no existen. Se puede ampliar pasando --desde con una fecha anterior.
 """
 
 from __future__ import annotations
@@ -50,8 +51,12 @@ def main() -> int:
     parser.add_argument(
         "--partidas-por-jugador", type=int, default=25, help="historial a pedir por jugador"
     )
-    parser.add_argument("--desde", default=None, help="fecha inicial ISO, ej. 2025-08-01")
-    parser.add_argument("--hasta", default=None, help="fecha final ISO, ej. 2026-01-01")
+    parser.add_argument(
+        "--desde",
+        default="2026-01-01",
+        help="fecha inicial ISO (default 2026-01-01: solo historia de 2026 en adelante)",
+    )
+    parser.add_argument("--hasta", default=None, help="fecha final ISO, ej. 2026-06-01")
     parser.add_argument(
         "--plataformas",
         default=None,
