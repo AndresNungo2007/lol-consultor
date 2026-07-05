@@ -1,0 +1,65 @@
+# Recolección programada de winrates (ítems/runas) con la Riot API.
+#
+# Corre cada 6 horas en GitHub Actions usando el secreto RIOT_API_KEY y
+# publica el agregado acumulado en la rama 'winrates-data' (main está
+# protegida). La app local lo sincroniza en su ciclo de refresco.
+#
+# Si la key expira (la de desarrollo dura 24 h), el job falla y GitHub
+# notifica por correo: renovar la key en developer.riotgames.com y
+# actualizar el secreto. Con una Personal API Key no expira.
+
+name: Recolectar winrates
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      partidas:
+        description: "Partidas nuevas a procesar"
+        default: "150"
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar paquete
+        run: pip install -e .
+
+      - name: Restaurar agregados previos (rama winrates-data)
+        run: |
+          if git show origin/winrates-data:winrates.json > winrates.json 2>/dev/null; then
+            echo "Agregado previo restaurado"
+          else
+            rm -f winrates.json
+            echo "Sin agregado previo: primera recoleccion"
+          fi
+
+      - name: Recolectar partidas
+        env:
+          RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+        run: |
+          python scripts/collect_winrates.py \
+            --partidas "${{ github.event.inputs.partidas || '150' }}" \
+            --store winrates.json
+
+      - name: Publicar en la rama winrates-data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B winrates-data
+          git add -f winrates.json
+          git commit -m "Winrates: actualizacion automatica $(date -u +%Y-%m-%dT%H:%M)"
+          git push -f origin winrates-data

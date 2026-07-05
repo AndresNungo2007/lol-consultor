@@ -90,6 +90,19 @@ tiene al menos 30 apariciones. **Sesgo conocido:** el equipo que va ganando
 completa más ítems, así que estos winrates sirven para comparar ítems entre
 sí, no como probabilidad causal de victoria.
 
+### Recolección automática en la nube
+
+El workflow [collect-winrates.yml](.github/workflows/collect-winrates.yml)
+corre cada 6 horas en GitHub Actions con el secreto `RIOT_API_KEY` del repo,
+acumula la muestra y publica el agregado en la rama `winrates-data`. La app
+local lo sincroniza en su ciclo de refresco (`LOL_WINRATES_SYNC_URL`), así la
+muestra crece aunque tu PC esté apagado.
+
+Cuando la key expira, el job falla y GitHub te avisa por correo: renueva la
+key y actualiza el secreto (Settings → Secrets and variables → Actions).
+Para no renovar a diario, solicita una **Personal API Key** en
+developer.riotgames.com (Register Product → Personal): no expira cada 24 h.
+
 ## Análisis de draft
 
 La pestaña "Análisis de draft" recomienda qué campeón elegir de tu pool según

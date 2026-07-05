@@ -16,7 +16,9 @@ class _RecordingService:
         self.ddragon = self
         self.opgg = self
         self.wiki = self
+        self.winrates = self
         self.version = "14.20.1"
+        self.total_matches = 0
 
     # --- interfaz usada por refresh_all ---
     def check_for_new_patch(self) -> bool:
@@ -48,6 +50,10 @@ class _RecordingService:
     def refresh_stats(self) -> bool:
         self.calls.append("opgg_refresh")
         return True
+
+    def sync_from_url(self, url: str, timeout: int = 30) -> bool:
+        self.calls.append("winrates_sync")
+        return False
 
     def find_champion(self, _nombre: str):
         return None  # pool no resoluble en este stub

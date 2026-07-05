@@ -25,6 +25,11 @@ from lol_consultor.winrates import WinrateStore, collect_winrates  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(description="Recolecta winrates de items/runas")
     parser.add_argument("--partidas", type=int, default=100, help="partidas nuevas a procesar")
+    parser.add_argument(
+        "--store",
+        default=None,
+        help="ruta del JSON de agregados (default: <cache>/winrates.json)",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(message)s")
@@ -38,7 +43,7 @@ def main() -> int:
         print(exc)
         return 1
 
-    store = WinrateStore(config.CACHE_DIR / "winrates.json")
+    store = WinrateStore(args.store or config.CACHE_DIR / "winrates.json")
     report = collect_winrates(riot, store, max_matches=args.partidas)
     print(report.summary())
     print(f"Total de partidas acumuladas: {store.total_matches}")

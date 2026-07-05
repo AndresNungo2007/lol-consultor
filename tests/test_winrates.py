@@ -87,6 +87,45 @@ def test_winrate_hidden_below_min_sample(tmp_path):
     assert store.item_winrate(3031) is None  # muestra insuficiente
 
 
+def test_sync_from_url_adopts_bigger_remote(tmp_path):
+    import responses as responses_lib
+
+    store = WinrateStore(tmp_path / "wr.json")
+    store.record("items", 3031, won=True)
+    store.mark_seen("LA1_1")
+    remote = {
+        "items": {"3031": [50, 30]},
+        "keystones": {},
+        "seen_matches": [f"LA1_{i}" for i in range(40)],
+    }
+    with responses_lib.RequestsMock() as rsps:
+        rsps.add(responses_lib.GET, "https://example.com/winrates.json", json=remote)
+
+        updated = store.sync_from_url("https://example.com/winrates.json")
+
+    assert updated
+    assert store.total_matches == 40
+    assert store.item_winrate(3031) == (60.0, 50)
+    # y quedo persistido
+    assert WinrateStore(tmp_path / "wr.json").total_matches == 40
+
+
+def test_sync_from_url_ignores_smaller_remote(tmp_path):
+    import responses as responses_lib
+
+    store = WinrateStore(tmp_path / "wr.json")
+    for i in range(10):
+        store.mark_seen(f"LA1_{i}")
+    remote = {"items": {}, "keystones": {}, "seen_matches": ["LA1_0"]}
+    with responses_lib.RequestsMock() as rsps:
+        rsps.add(responses_lib.GET, "https://example.com/winrates.json", json=remote)
+
+        updated = store.sync_from_url("https://example.com/winrates.json")
+
+    assert not updated
+    assert store.total_matches == 10
+
+
 def test_collect_handles_ladder_failure(tmp_path):
     class _BrokenRiot:
         def challenger_puuids(self, max_players: int):
