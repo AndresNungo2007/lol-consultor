@@ -13,7 +13,7 @@ Solo vuelve a descargar cuando Riot publica un parche nuevo -> siempre
 actualizado sin tráfico innecesario.
 
 NO cubre (no existe API oficial): counters, tier lists, build recomendada,
-winrates por matchup, estilos de juego detallados. Ver connectors/fandom_wiki.py
+winrates por matchup, estilos de juego detallados. Ver connectors/lol_wiki.py
 y connectors/opgg_meta.py para esos datos.
 """
 

@@ -29,20 +29,24 @@ _MAX_TOOL_ROUNDS = 6
 
 _SYSTEM_PROMPT = (
     "Eres un asistente experto en League of Legends. Respondes SIEMPRE en español, "
-    "de forma concreta y breve.\n"
+    "de forma concreta y breve — incluso cuando las herramientas devuelvan texto en "
+    "inglés, tu respuesta final debe estar en español (traduce lo relevante y conserva "
+    "los nombres propios de habilidades/ítems).\n"
     "REGLA OBLIGATORIA: nunca respondas de memoria. Antes de responder llama a la "
     "herramienta correspondiente y basa tu respuesta EXCLUSIVAMENTE en lo que devuelva:\n"
     "- Mecánicas del juego (tenacidad, armadura, penetración, omnivamp, CC, oro, visión...) "
     "-> explicar_dinamica\n"
     "- Qué campeón elegir/pickear en un draft -> analizar_draft\n"
-    "- Campeones y habilidades -> detalle_campeon | counters y winrates -> meta_campeon\n"
+    "- Resumen de un campeón -> detalle_campeon | counters y winrates -> meta_campeon\n"
+    "- Detalles FINOS de habilidades (resets, cifras por nivel, interacciones) "
+    "-> habilidades_detalladas (fuente: wikilol, la más precisa)\n"
     "- Ítems -> buscar_items | runas -> arboles_runas | cambios de balance -> historial_parches\n"
     "Si la herramienta contradice lo que creías, la herramienta tiene razón. "
     "Si una herramienta no devuelve datos, dilo claramente; no inventes cifras. "
-    "Si preguntan por detalles mecánicos finos (resets, interacciones, cifras exactas) que "
-    "la descripción oficial no menciona, responde que la descripción no lo especifica en vez "
-    "de afirmarlo o negarlo categóricamente. "
-    "Los counters provienen de op.gg (comunidad) y el resto de datos oficiales de Riot."
+    "Si ni siquiera habilidades_detalladas menciona el detalle preguntado, responde que las "
+    "fuentes no lo especifican en vez de afirmarlo o negarlo categóricamente. "
+    "Los counters provienen de op.gg (comunidad), el detalle de habilidades de la wiki de la "
+    "comunidad y el resto de datos oficiales de Riot."
 )
 
 _TOOL_SCHEMAS: list[dict[str, Any]] = [
@@ -118,6 +122,24 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
         "function": {
             "name": "historial_parches",
             "description": "Cambios de balance recientes de un campeón (wiki de la comunidad).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nombre": {"type": "string", "description": "Nombre del campeón"}
+                },
+                "required": ["nombre"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "habilidades_detalladas",
+            "description": (
+                "Detalle COMPLETO de las habilidades de un campeón desde la wiki de la "
+                "comunidad: cooldowns, costos, daños por nivel, resets e interacciones. "
+                "Úsala para preguntas finas sobre cómo funciona una habilidad."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -261,6 +283,7 @@ class LoLAssistant:
             "buscar_items": self._buscar_items,
             "arboles_runas": self._arboles_runas,
             "historial_parches": self._historial_parches,
+            "habilidades_detalladas": self._habilidades_detalladas,
             "analizar_draft": self._analizar_draft,
             "explicar_dinamica": self._explicar_dinamica,
         }
@@ -357,10 +380,35 @@ class LoLAssistant:
         champ = self._find_champion(nombre)
         if champ is None:
             return f"No encontré ningún campeón llamado '{nombre}'."
-        history = self.service.wiki.champion_patch_history(champ["name"])
+        wiki_title = self.service.english_name(champ["id"]) or champ["name"]
+        history = self.service.wiki.champion_patch_history(wiki_title)
         if not history:
             return f"No hay historial de parches disponible para {champ['name']}."
         return history[:2000]
+
+    def _habilidades_detalladas(self, nombre: str) -> str:
+        champ = self._find_champion(nombre)
+        if champ is None:
+            return f"No encontré ningún campeón llamado '{nombre}'."
+        wiki_title = self.service.english_name(champ["id"]) or champ["name"]
+        abilities = self.service.wiki.champion_abilities(wiki_title)
+        if not abilities:
+            return f"La wiki no tiene detalle de habilidades para {champ['name']}."
+        # La wiki no etiqueta los slots (Q/W/E/R van en iconos que se pierden al
+        # limpiar el HTML): anteponer el mapa slot -> nombre en inglés para que
+        # el modelo asocie bien cada párrafo.
+        slot_map = self._english_slot_map(champ["id"])
+        return f"{slot_map}\n\n{abilities[:8000]}" if slot_map else abilities[:8000]
+
+    def _english_slot_map(self, champion_id: str) -> str:
+        try:
+            data = self.service.ddragon_en.champion(champion_id)
+        except Exception:
+            return ""
+        parts = [f"Pasiva: {data['passive']['name']}"]
+        for slot, spell in zip("QWER", data.get("spells", []), strict=False):
+            parts.append(f"{slot}: {spell['name']}")
+        return "Mapa de habilidades de " + data["name"] + " -> " + " | ".join(parts)
 
     def _analizar_draft(self, enemigos: str, aliados: str = "") -> str:
         enemy_list = [e.strip() for e in enemigos.split(",") if e.strip()]

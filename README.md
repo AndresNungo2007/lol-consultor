@@ -10,9 +10,12 @@ parche y revisa periódicamente si Riot publicó uno nuevo.
 | Dato | Fuente | Oficial |
 |---|---|---|
 | Campeones, ítems, runas, hechizos, iconos, tips (allytips/enemytips) | [Data Dragon](https://developer.riotgames.com/docs/lol) | Sí (Riot) |
-| Habilidades detalladas | [Community Dragon](https://www.communitydragon.org/) | Sí (Riot) |
-| Historial de cambios de balance por campeón | [Fandom Wiki](https://leagueoflegends.fandom.com) (MediaWiki API) | No |
+| Detalle fino de habilidades (resets, cifras por nivel) e historial de parches | [wikilol](https://wiki.leagueoflegends.com) (MediaWiki API) | No (comunidad) |
 | Tier list, winrate/pickrate/banrate, counters por matchup | [op.gg](https://op.gg) vía [`OPGG.py`](https://github.com/ShoobyDoo/OPGG.py) | No |
+| Winrates de ítems y runas (calculados de partidas reales) | [Riot API](https://developer.riotgames.com) Match-V5 | Sí (Riot, requiere key) |
+
+> Nota: la antigua wiki de Fandom quedó congelada en el parche 14.18 tras la
+> migración de la comunidad a wiki.leagueoflegends.com; este proyecto usa la nueva.
 
 **Fuera de alcance:** build de ítems y página de runas recomendada de op.gg
 (se cargan client-side vía su API privada, no hay endpoint público ni
@@ -67,6 +70,25 @@ Tres capas mantienen los datos al día:
    schtasks /Create /SC HOURLY /TN "LoLConsultor Refresh" ^
      /TR "\"C:\ruta\.venv\Scripts\python.exe\" \"C:\ruta\scripts\refresh_data.py\""
    ```
+
+## Winrates de ítems y runas
+
+No existe fuente pública que exponga winrates por ítem/runa, así que el
+proyecto los **calcula** con la API oficial de Riot: se recolectan partidas
+ranked del ladder y, por cada ítem del build final y cada runa clave, se
+cuenta apariciones vs victorias.
+
+```bash
+# 1. Key gratuita en https://developer.riotgames.com -> RIOT_API_KEY en .env
+#    (la key de desarrollo expira cada 24 h)
+# 2. Recolectar (acumula entre ejecuciones; ~3-4 min por cada 100 partidas)
+python scripts/collect_winrates.py --partidas 200
+```
+
+Los badges aparecen en las pestañas de Ítems y Runas cuando un ítem/runa
+tiene al menos 30 apariciones. **Sesgo conocido:** el equipo que va ganando
+completa más ítems, así que estos winrates sirven para comparar ítems entre
+sí, no como probabilidad causal de victoria.
 
 ## Análisis de draft
 

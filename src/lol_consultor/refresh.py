@@ -84,7 +84,9 @@ def refresh_all(service: LoLService, prefetch_champion_details: bool = False) ->
             if champ is None:
                 continue
             service.ddragon.champion(champ["id"])
-            service.wiki.champion_patch_history(champ["name"])
+            wiki_title = service.english_name(champ["id"]) or champ["name"]
+            service.wiki.champion_patch_history(wiki_title)
+            service.wiki.champion_abilities(wiki_title)
         except Exception as exc:
             report.errors.append(f"pool {name}: {exc}")
     report.refreshed.append(f"pool ({len(config.DEFAULT_POOL)} campeones)")

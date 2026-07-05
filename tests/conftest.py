@@ -145,6 +145,9 @@ class _StubWiki:
     def champion_patch_history(self, _name: str) -> str:
         return "V14.20: cambio de balance"
 
+    def champion_abilities(self, _name: str) -> str:
+        return "Scoring a takedown resets the cooldown."
+
 
 class _StubWinrates:
     total_matches = 0
@@ -167,6 +170,7 @@ class StubService:
         self._items = items
         self._runes = runes
         self.ddragon = StubDDragon(version)
+        self.ddragon_en = StubDDragon(version)
         self.opgg = _StubOpgg()
         self.wiki = _StubWiki()
         self.winrates = _StubWinrates()
@@ -187,6 +191,9 @@ class StubService:
                 return c
         return None
 
+    def english_name(self, champion_id: str) -> str:
+        return champion_id
+
     def champion_detail(self, champion_id, **_kwargs):
         from lol_consultor.models import ChampionMeta, CounterEntry, PositionMeta
         from lol_consultor.service import ChampionDetail
@@ -197,7 +204,12 @@ class StubService:
             position="MID", play_rate=8.8, win_rate=51.0, ban_rate=3.3, counters=counters
         )
         meta = ChampionMeta(champion_id=103, positions=[position])
-        return ChampionDetail(data=data, meta=meta, patch_history="V14.20: cambio de balance")
+        return ChampionDetail(
+            data=data,
+            meta=meta,
+            patch_history="V14.20: cambio de balance",
+            wiki_abilities="Scoring a takedown resets the cooldown.",
+        )
 
     def legendary_items(self):
         return list(self._items["data"].values())

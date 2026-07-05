@@ -197,12 +197,37 @@ def register_callbacks(app: Dash, service: LoLService) -> None:
 
         meta_section = _meta_section(detail, service.champions_by_key())
 
+        wiki_abilities_section = (
+            dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.H6("Detalle completo de habilidades (wikilol, en inglés)"),
+                        html.Pre(
+                            detail.wiki_abilities,
+                            style={
+                                "whiteSpace": "pre-wrap",
+                                "maxHeight": "500px",
+                                "overflowY": "auto",
+                            },
+                            className="small",
+                        ),
+                    ]
+                )
+            )
+            if detail.wiki_abilities
+            else dbc.Alert(
+                "Detalle de la wiki no disponible para este campeón.",
+                color="warning",
+                class_name="small",
+            )
+        )
+
         patch_history_style = {"whiteSpace": "pre-wrap", "maxHeight": "300px", "overflowY": "auto"}
         patch_section = (
             dbc.Card(
                 dbc.CardBody(
                     [
-                        html.H6("Historial de cambios recientes (Fandom Wiki)"),
+                        html.H6("Historial de cambios recientes (wikilol)"),
                         html.Pre(
                             detail.patch_history, style=patch_history_style, className="small"
                         ),
@@ -221,6 +246,10 @@ def register_callbacks(app: Dash, service: LoLService) -> None:
                 dbc.Tabs(
                     [
                         dbc.Tab(html.Div(ability_cards, className="mt-3"), label="Habilidades"),
+                        dbc.Tab(
+                            html.Div(wiki_abilities_section, className="mt-3"),
+                            label="Habilidades a fondo (wiki)",
+                        ),
                         dbc.Tab(tips, label="Estilo de juego"),
                         dbc.Tab(
                             html.Div(meta_section, className="mt-3"),
