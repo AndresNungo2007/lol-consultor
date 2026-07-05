@@ -55,7 +55,10 @@ class LoLWikiConnector:
         self.session = requests.Session()
 
     def _get(self, params: dict[str, Any]) -> dict[str, Any]:
-        params = {**params, "format": "json"}
+        # redirects=1: muchas páginas son redirecciones (ej. 'Omnivamp' ->
+        # 'Vamp'); sin esto se parsea el stub "Redirect to: ..." en vez del
+        # contenido real.
+        params = {**params, "format": "json", "redirects": "1"}
         r = self.session.get(WIKI_API, params=params, timeout=self.timeout)
         r.raise_for_status()
         return r.json()

@@ -70,6 +70,23 @@ def test_page_section_text_returns_none_on_wiki_error(tmp_path):
 
 
 @responses.activate
+def test_requests_follow_redirects(tmp_path):
+    seen_urls: list[str] = []
+
+    def _callback(request):
+        seen_urls.append(request.url)
+        return (200, {}, json.dumps({"parse": {"text": {"*": "<p>contenido real</p>"}}}))
+
+    responses.add_callback(responses.GET, WIKI_API, callback=_callback)
+
+    connector = _connector(tmp_path)
+    result = connector.page_intro("Omnivamp")
+
+    assert result == "contenido real"
+    assert all("redirects=1" in url for url in seen_urls)
+
+
+@responses.activate
 def test_champion_abilities_returns_detailed_section(tmp_path):
     sections = [{"line": "Abilities", "index": "1"}, {"line": "Patch history", "index": "3"}]
     text_by_index = {
