@@ -158,6 +158,18 @@ class _StubWinrates:
     def keystone_winrate(self, _perk_id):
         return None
 
+    def winrate_any(self, _kind, _key):
+        return None
+
+    def games(self, _kind, _key):
+        return 0
+
+    def smoothed(self, _kind, _key, prior=0.5, k=10):
+        return prior
+
+    def keys_for_prefix(self, _kind, _prefix):
+        return []
+
 
 class StubService:
     """Sustituye a LoLService en tests: misma interfaz, sin red."""

@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 
 RANKED_SOLO_QUEUE_ID = 420
 
+# Enrutamiento regional de match-v5 por servidor (platform).
+PLATFORM_TO_REGION = {
+    "la1": "americas", "la2": "americas", "na1": "americas", "br1": "americas",
+    "euw1": "europe", "eun1": "europe", "tr1": "europe", "ru": "europe", "me1": "europe",
+    "kr": "asia", "jp1": "asia",
+    "oc1": "sea", "sg2": "sea", "tw2": "sea", "vn2": "sea",
+}
+
 
 class RiotApiError(RuntimeError):
     pass
@@ -98,11 +106,31 @@ class RiotApiConnector:
 
     # ---------- partidas ----------
 
-    def match_ids(self, puuid: str, count: int = 20) -> list[str]:
-        """IDs de partidas ranked soloQ recientes de un jugador."""
+    def match_ids(
+        self,
+        puuid: str,
+        count: int = 20,
+        start_time: int | None = None,
+        end_time: int | None = None,
+        start: int = 0,
+    ) -> list[str]:
+        """
+        IDs de partidas ranked soloQ de un jugador. start_time/end_time
+        (epoch segundos) permiten ventanas históricas — match-v5 conserva
+        alrededor de 2 años de partidas; 'start' pagina hacia atrás.
+        """
+        params: dict[str, Any] = {
+            "queue": RANKED_SOLO_QUEUE_ID,
+            "count": min(count, 100),
+            "start": start,
+        }
+        if start_time is not None:
+            params["startTime"] = start_time
+        if end_time is not None:
+            params["endTime"] = end_time
         return self._get(
             f"{self.region_url}/lol/match/v5/matches/by-puuid/{puuid}/ids",
-            params={"queue": RANKED_SOLO_QUEUE_ID, "count": min(count, 100)},
+            params=params,
         )
 
     def match(self, match_id: str) -> dict[str, Any]:
