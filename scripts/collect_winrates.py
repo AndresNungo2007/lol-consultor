@@ -44,6 +44,12 @@ def main() -> int:
         default=None,
         help="ruta del JSON de agregados (default: <cache>/winrates.json)",
     )
+    parser.add_argument(
+        "--jugadores", type=int, default=30, help="jugadores del ladder a muestrear"
+    )
+    parser.add_argument(
+        "--partidas-por-jugador", type=int, default=25, help="historial a pedir por jugador"
+    )
     parser.add_argument("--desde", default=None, help="fecha inicial ISO, ej. 2025-08-01")
     parser.add_argument("--hasta", default=None, help="fecha final ISO, ej. 2026-01-01")
     parser.add_argument(
@@ -76,6 +82,8 @@ def main() -> int:
             riot,
             store,
             max_matches=per_platform,
+            players=args.jugadores,
+            matches_per_player=args.partidas_por_jugador,
             start_time=_epoch(args.desde),
             end_time=_epoch(args.hasta),
         )
