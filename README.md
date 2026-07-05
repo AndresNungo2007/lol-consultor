@@ -107,6 +107,10 @@ acumula la muestra y publica el agregado en la rama `winrates-data`. La app
 local lo sincroniza en su ciclo de refresco (`LOL_WINRATES_SYNC_URL`), así la
 muestra crece aunque tu PC esté apagado.
 
+**La nube es el recolector canónico**: el agregado local se reemplaza por el
+remoto cuando este trae más partidas, así que las corridas manuales locales
+deben usar `--store` con otra ruta si no quieres que se pisen.
+
 Cuando la key expira, el job falla y GitHub te avisa por correo: renueva la
 key y actualiza el secreto (Settings → Secrets and variables → Actions).
 Para no renovar a diario, solicita una **Personal API Key** en
