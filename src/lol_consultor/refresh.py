@@ -77,6 +77,16 @@ def refresh_all(service: LoLService, prefetch_champion_details: bool = False) ->
     except Exception as exc:
         report.errors.append(f"meta op.gg: {exc}")
 
+    # Winrates acumulados en la nube (rama winrates-data, GitHub Actions).
+    if config.WINRATES_SYNC_URL:
+        try:
+            if service.winrates.sync_from_url(config.WINRATES_SYNC_URL):
+                report.refreshed.append(
+                    f"winrates sincronizados ({service.winrates.total_matches} partidas)"
+                )
+        except Exception as exc:
+            report.errors.append(f"winrates remotos: {exc}")
+
     # Pre-calentar lo que usa el análisis de draft: detalles y parches del pool.
     for name in config.DEFAULT_POOL:
         try:

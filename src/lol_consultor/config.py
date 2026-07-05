@@ -39,6 +39,13 @@ RIOT_API_KEY: str = os.getenv("RIOT_API_KEY", "")
 RIOT_PLATFORM: str = os.getenv("LOL_RIOT_PLATFORM", "la1")  # LAN (Latinoamérica Norte)
 RIOT_REGION: str = os.getenv("LOL_RIOT_REGION", "americas")
 
+# URL del agregado de winrates publicado por GitHub Actions (rama winrates-data).
+# El refresher lo descarga si trae más partidas que el local. Vacío = desactivado.
+WINRATES_SYNC_URL: str = os.getenv(
+    "LOL_WINRATES_SYNC_URL",
+    "https://raw.githubusercontent.com/AndresNungo2007/lol-consultor/winrates-data/winrates.json",
+)
+
 # Análisis de draft: pool de campeones del usuario y su rol habitual.
 DEFAULT_POOL: list[str] = [
     c.strip()

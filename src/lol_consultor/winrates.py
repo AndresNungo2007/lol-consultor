@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import requests
+
 from lol_consultor.connectors.riot_api import RiotApiConnector
 
 logger = logging.getLogger(__name__)
@@ -99,6 +101,22 @@ class WinrateStore:
     @property
     def total_matches(self) -> int:
         return len(self._data["seen_matches"])
+
+    def sync_from_url(self, url: str, timeout: int = 30) -> bool:
+        """
+        Descarga el agregado publicado (rama winrates-data del repo) y lo
+        adopta si trae MÁS partidas que el local. True si se actualizó.
+        """
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        remote = response.json()
+        if not isinstance(remote, dict) or "items" not in remote or "seen_matches" not in remote:
+            raise ValueError("El agregado remoto no tiene el formato esperado")
+        if len(remote["seen_matches"]) <= self.total_matches:
+            return False
+        self._data = remote
+        self.save()
+        return True
 
 
 def _participant_items(participant: dict[str, Any]) -> set[int]:
