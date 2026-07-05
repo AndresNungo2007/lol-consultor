@@ -33,6 +33,12 @@ REFRESH_INTERVAL_S: int = _int_env("LOL_REFRESH_INTERVAL_S", 3600)
 OLLAMA_HOST: str = os.getenv("LOL_OLLAMA_HOST", "http://127.0.0.1:11434")
 OLLAMA_MODEL: str = os.getenv("LOL_OLLAMA_MODEL", "qwen3:8b")
 
+# Riot API (winrates de items/runas a partir de partidas reales).
+# Key gratuita en https://developer.riotgames.com (la de desarrollo expira cada 24 h).
+RIOT_API_KEY: str = os.getenv("RIOT_API_KEY", "")
+RIOT_PLATFORM: str = os.getenv("LOL_RIOT_PLATFORM", "la1")  # LAN (Latinoamérica Norte)
+RIOT_REGION: str = os.getenv("LOL_RIOT_REGION", "americas")
+
 # Análisis de draft: pool de campeones del usuario y su rol habitual.
 DEFAULT_POOL: list[str] = [
     c.strip()

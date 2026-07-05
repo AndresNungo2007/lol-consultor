@@ -9,26 +9,38 @@ from lol_consultor.service import LoLService
 from lol_consultor.textutil import strip_tags
 
 
-def _perk_block(perk: dict, service: LoLService) -> html.Div:
+def _perk_block(perk: dict, service: LoLService, is_keystone: bool = False) -> html.Div:
     icon_url = service.ddragon.rune_icon_url(perk["icon"])
     description = strip_tags(perk.get("shortDesc"))[:200]
-    return html.Div(
-        [
-            html.Img(src=icon_url, height="32px", className="me-2"),
-            html.Span(perk["name"], className="fw-bold"),
-            html.P(description, className="small text-muted mb-2"),
-        ],
-        className="mb-2",
-    )
+    children = [
+        html.Img(src=icon_url, height="32px", className="me-2"),
+        html.Span(perk["name"], className="fw-bold"),
+    ]
+    if is_keystone:
+        winrate = service.winrates.keystone_winrate(perk["id"])
+        if winrate is not None:
+            wr, games = winrate
+            children.append(
+                dbc.Badge(
+                    f"WR {wr}% · {games}",
+                    color="success" if wr >= 50 else "secondary",
+                    class_name="ms-2",
+                )
+            )
+    children.append(html.P(description, className="small text-muted mb-2"))
+    return html.Div(children, className="mb-2")
 
 
 def _tree_card(tree: dict, service: LoLService) -> dbc.Card:
     slot_blocks = [
         html.Div(
-            [_perk_block(perk, service) for perk in slot["runes"]],
+            [
+                _perk_block(perk, service, is_keystone=(slot_index == 0))
+                for perk in slot["runes"]
+            ],
             className="d-flex flex-wrap gap-3",
         )
-        for slot in tree["slots"]
+        for slot_index, slot in enumerate(tree["slots"])
     ]
     tree_icon_url = service.ddragon.rune_icon_url(tree["icon"])
 

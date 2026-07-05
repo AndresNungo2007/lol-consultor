@@ -1,17 +1,19 @@
 """
-Conector de leagueoflegends.fandom.com vía su MediaWiki API pública
-(api.php), diseñada para consumo programático -> no es scraping de HTML.
+Conector de wiki.leagueoflegends.com (la "wikilol" oficial de la comunidad)
+vía su MediaWiki API pública (api.php) -> no es scraping de HTML.
 
-Data Dragon ya cubre lore/blurb/allytips/enemytips de forma oficial (ver
-connectors/ddragon.py), así que este conector se enfoca en lo que Riot NO
-publica: el historial de cambios de balance por campeón ("Patch history"),
-útil para entender cómo evolucionó su estilo de juego reciente.
+Es la fuente más precisa para el DETALLE de habilidades (resets, cifras
+exactas, interacciones) y para el historial de parches al día. Nota: la
+antigua wiki de Fandom quedó congelada en el parche 14.18 tras la migración
+a este dominio; este conector la reemplaza.
 
-Nota técnica: esta wiki no tiene instalada la extensión TextExtracts
-(`prop=extracts` falla), y el wikitext crudo de sus secciones son en su
-mayoría transclusiones de plantillas/Lua vacías de contenido legible. Por
-eso se usa `action=parse&prop=text` (HTML ya renderizado) y se limpia con un
-stripper propio, en vez de intentar parsear wikitext.
+Los títulos de página usan el nombre EN INGLÉS del campeón (ej. 'Locke',
+'Nunu & Willump'); la capa de servicio resuelve el nombre inglés desde
+Data Dragon en_US.
+
+Nota técnica: el wikitext crudo son transclusiones de plantillas/Lua sin
+contenido legible, por eso se usa `action=parse&prop=text` (HTML renderizado)
+y se limpia con un stripper propio.
 """
 
 from __future__ import annotations
@@ -25,9 +27,10 @@ import requests
 
 from lol_consultor.cache import TTLCache
 
-WIKI_API = "https://leagueoflegends.fandom.com/api.php"
+WIKI_API = "https://wiki.leagueoflegends.com/en-us/api.php"
 
 _PATCH_HISTORY_HEADINGS = {"patch history"}
+_ABILITIES_HEADINGS = {"abilities"}
 
 
 def _strip_html(raw_html: str) -> str:
@@ -44,7 +47,7 @@ def _strip_html(raw_html: str) -> str:
     return text.strip()
 
 
-class FandomWikiConnector:
+class LoLWikiConnector:
     def __init__(self, cache: TTLCache, ttl_seconds: int, timeout: int = 20) -> None:
         self.cache = cache
         self.ttl_seconds = ttl_seconds
@@ -56,10 +59,6 @@ class FandomWikiConnector:
         r = self.session.get(WIKI_API, params=params, timeout=self.timeout)
         r.raise_for_status()
         return r.json()
-
-    def champion_page_title(self, champion_display_name: str) -> str:
-        """La wiki aloja varios juegos de Riot; las páginas de campeón usan '/LoL'."""
-        return f"{champion_display_name}/LoL"
 
     def page_section_text(self, title: str, heading_candidates: Iterable[str]) -> str | None:
         """
@@ -95,7 +94,13 @@ class FandomWikiConnector:
         cache_key = f"wiki_section_{title}_{'_'.join(sorted(candidates))}"
         return self.cache.get_or_set(cache_key, self.ttl_seconds, fetch)
 
-    def champion_patch_history(self, champion_display_name: str) -> str | None:
-        """Historial reciente de cambios de balance del campeón, en texto plano."""
-        title = self.champion_page_title(champion_display_name)
-        return self.page_section_text(title, _PATCH_HISTORY_HEADINGS)
+    def champion_patch_history(self, champion_english_name: str) -> str | None:
+        """Historial de cambios de balance del campeón, al día, en texto plano."""
+        return self.page_section_text(champion_english_name, _PATCH_HISTORY_HEADINGS)
+
+    def champion_abilities(self, champion_english_name: str) -> str | None:
+        """
+        Detalle completo de habilidades desde la wiki: cooldowns, costos,
+        daños por nivel, resets e interacciones que Data Dragon omite.
+        """
+        return self.page_section_text(champion_english_name, _ABILITIES_HEADINGS)

@@ -5,11 +5,11 @@ import json
 import responses
 
 from lol_consultor.cache import TTLCache
-from lol_consultor.connectors.fandom_wiki import WIKI_API, FandomWikiConnector, _strip_html
+from lol_consultor.connectors.lol_wiki import WIKI_API, LoLWikiConnector, _strip_html
 
 
-def _connector(tmp_path) -> FandomWikiConnector:
-    return FandomWikiConnector(TTLCache(tmp_path), ttl_seconds=3600)
+def _connector(tmp_path) -> LoLWikiConnector:
+    return LoLWikiConnector(TTLCache(tmp_path), ttl_seconds=3600)
 
 
 def _callback_factory(sections: list[dict], text_by_index: dict[str, str]):
@@ -64,9 +64,26 @@ def test_page_section_text_returns_none_on_wiki_error(tmp_path):
     responses.add_callback(responses.GET, WIKI_API, callback=_callback)
 
     connector = _connector(tmp_path)
-    result = connector.page_section_text("PaginaQueNoExiste/LoL", ["Patch history"])
+    result = connector.page_section_text("PaginaQueNoExiste", ["Patch history"])
 
     assert result is None
+
+
+@responses.activate
+def test_champion_abilities_returns_detailed_section(tmp_path):
+    sections = [{"line": "Abilities", "index": "1"}, {"line": "Patch history", "index": "3"}]
+    text_by_index = {
+        "1": "<p>Scoring a takedown against an enemy champion resets the cooldown.</p>"
+    }
+    responses.add_callback(
+        responses.GET, WIKI_API, callback=_callback_factory(sections, text_by_index)
+    )
+
+    connector = _connector(tmp_path)
+    result = connector.champion_abilities("Locke")
+
+    assert result is not None
+    assert "resets the cooldown" in result
 
 
 def test_strip_html_removes_tags_and_editsection_links():

@@ -11,9 +11,10 @@ from opgg.params import Queue, Tier
 from lol_consultor import config
 from lol_consultor.cache import TTLCache
 from lol_consultor.connectors.ddragon import DDragonConnector
-from lol_consultor.connectors.fandom_wiki import FandomWikiConnector
+from lol_consultor.connectors.lol_wiki import LoLWikiConnector
 from lol_consultor.connectors.opgg_meta import OpggMetaConnector
 from lol_consultor.models import ChampionMeta
+from lol_consultor.winrates import WinrateStore
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class ChampionDetail:
     data: dict[str, Any]  # JSON completo de Data Dragon (spells, passive, stats, tips...)
     meta: ChampionMeta | None  # tier/counters de op.gg, None si no disponible
     patch_history: str | None  # texto plano, None si no disponible
+    wiki_abilities: str | None = None  # detalle fino de habilidades (wikilol)
 
 
 class LoLService:
@@ -31,13 +33,32 @@ class LoLService:
         timeout: int = config.HTTP_TIMEOUT,
     ) -> None:
         self.ddragon = DDragonConnector(lang=lang, cache_dir=cache_dir, timeout=timeout)
+        # Nombres en inglés (títulos de página de la wikilol); cache_dir propio
+        # para no colisionar con los JSON del idioma principal, misma versión.
+        self.ddragon_en = DDragonConnector(
+            lang="en_US",
+            cache_dir=Path(cache_dir) / "_en",
+            timeout=timeout,
+            version=self.ddragon.version,
+        )
         self.ttl_cache = TTLCache(Path(cache_dir) / "_ttl")
-        self.wiki = FandomWikiConnector(self.ttl_cache, config.WIKI_CACHE_TTL, timeout=timeout)
+        self.wiki = LoLWikiConnector(self.ttl_cache, config.WIKI_CACHE_TTL, timeout=timeout)
         self.opgg = OpggMetaConnector(self.ttl_cache, config.OPGG_CACHE_TTL)
+        # Winrates propios calculados con la Riot API (scripts/collect_winrates.py).
+        self.winrates = WinrateStore(Path(cache_dir) / "winrates.json")
 
     def check_for_new_patch(self) -> bool:
         """True si Data Dragon publicó un parche nuevo desde la última consulta."""
-        return self.ddragon.check_for_new_patch()
+        changed = self.ddragon.check_for_new_patch()
+        if changed:
+            self.ddragon_en.version = self.ddragon.version
+            self.ddragon_en._cache.clear()
+        return changed
+
+    def english_name(self, champion_id: str) -> str | None:
+        """Nombre en inglés del campeón (título de página en la wikilol)."""
+        champ = self.ddragon_en.champions().get(champion_id)
+        return champ["name"] if champ else None
 
     def clear_meta_caches(self) -> int:
         """Invalida los caches TTL (wiki y op.gg). Devuelve cuántas entradas borró."""
@@ -74,8 +95,12 @@ class LoLService:
     ) -> ChampionDetail:
         data = self.ddragon.champion(champion_id)
         meta = self.opgg.champion_meta(int(data["key"]), tier=tier, queue=queue)
-        patch_history = self.wiki.champion_patch_history(data["name"])
-        return ChampionDetail(data=data, meta=meta, patch_history=patch_history)
+        wiki_title = self.english_name(champion_id) or data["name"]
+        patch_history = self.wiki.champion_patch_history(wiki_title)
+        wiki_abilities = self.wiki.champion_abilities(wiki_title)
+        return ChampionDetail(
+            data=data, meta=meta, patch_history=patch_history, wiki_abilities=wiki_abilities
+        )
 
     def items(self) -> dict[str, Any]:
         return self.ddragon.items()
