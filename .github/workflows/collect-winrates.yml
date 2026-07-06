@@ -17,7 +17,7 @@ on:
     inputs:
       partidas:
         description: "Partidas nuevas a procesar"
-        default: "150"
+        default: "300"
 
 permissions:
   contents: write
@@ -52,7 +52,9 @@ jobs:
           RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
         run: |
           python scripts/collect_winrates.py \
-            --partidas "${{ github.event.inputs.partidas || '150' }}" \
+            --partidas "${{ github.event.inputs.partidas || '300' }}" \
+            --jugadores 40 --partidas-por-jugador 30 \
+            --plataformas la1,la2,br1,na1 \
             --store winrates.json
 
       - name: Publicar en la rama winrates-data
