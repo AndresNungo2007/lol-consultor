@@ -74,6 +74,11 @@ def test_collect_aggregates_all_dimensions(tmp_path):
     assert store._data["keystone_vs"]["8112_vs_157"] == [1, 1]
     # todas las runas seleccionadas cuentan en 'runes'
     assert store._data["runes"]["8347"] == [2, 1]
+    # y tambien por campeon (champ_runes), no solo la keystone
+    assert store._data["champ_runes"]["234_8112"] == [1, 1]
+    assert store._data["champ_runes"]["234_8126"] == [1, 1]
+    assert store._data["champ_runes"]["234_8347"] == [1, 1]
+    assert store._data["champ_runes"]["157_8347"] == [1, 0]
 
 
 def test_collect_skips_already_seen_matches(tmp_path):

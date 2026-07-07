@@ -8,7 +8,9 @@ Dimensiones agregadas (todas persistentes y acumulativas):
   - duos: "A_con_B" -> partidas con A y B en el mismo equipo
   - item_vs / keystone_vs: "item_vs_enemigo" -> éxito del ítem/runa contra
     un campeón enemigo específico
-  - champ_items / champ_keystones: qué compra/usa cada campeón y con qué éxito
+  - champ_items / champ_keystones / champ_runes: qué compra/usa cada campeón
+    (champ_runes incluye TODAS las runas seleccionadas, no solo la keystone)
+    y con qué éxito
 
 Sesgo conocido (se comunica en la UI): el equipo que va ganando completa más
 ítems; los winrates sirven para COMPARAR opciones, no como causalidad.
@@ -45,6 +47,7 @@ _EMPTY_SCHEMA: dict[str, Any] = {
     "keystone_vs": {},
     "champ_items": {},
     "champ_keystones": {},
+    "champ_runes": {},
     "seen_matches": [],
 }
 
@@ -212,6 +215,8 @@ def _record_participant(
 
     for perk in all_perks:
         store.record("runes", perk, won)
+        if champ:
+            store.record("champ_runes", f"{champ}_{perk}", won)
     if keystone:
         store.record("keystones", keystone, won)
         for enemy in enemies:

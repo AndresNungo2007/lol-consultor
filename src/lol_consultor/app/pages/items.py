@@ -9,6 +9,13 @@ from lol_consultor.service import LoLService
 from lol_consultor.textutil import item_description_sections
 from lol_consultor.winrates import MIN_GAMES_FOR_DISPLAY
 
+_SORT_OPTIONS = [
+    {"label": "Precio: mayor a menor (por defecto)", "value": "gold_desc"},
+    {"label": "Precio: menor a mayor", "value": "gold_asc"},
+    {"label": "Winrate: mayor a menor", "value": "wr_desc"},
+    {"label": "Winrate: menor a mayor", "value": "wr_asc"},
+]
+
 _TAG_LABELS = {
     "AbilityHaste": "Aceleración de habilidades",
     "Active": "Activa",
@@ -117,15 +124,26 @@ def layout(service: LoLService) -> html.Div:
         [
             winrate_note or html.Div(),
             dbc.Row(
-                dbc.Col(
-                    dcc.Dropdown(
-                        id="item-tag-filter",
-                        options=tag_options,
-                        multi=True,
-                        placeholder="Filtrar por tipo de ítem...",
+                [
+                    dbc.Col(
+                        dcc.Dropdown(
+                            id="item-tag-filter",
+                            options=tag_options,
+                            multi=True,
+                            placeholder="Filtrar por tipo de ítem...",
+                        ),
+                        md=6,
                     ),
-                    md=6,
-                ),
+                    dbc.Col(
+                        dcc.Dropdown(
+                            id="item-sort",
+                            options=_SORT_OPTIONS,
+                            value="gold_desc",
+                            clearable=False,
+                        ),
+                        md=6,
+                    ),
+                ],
                 class_name="mb-3",
             ),
             html.Div(id="item-grid", className="d-flex flex-wrap"),
@@ -144,17 +162,36 @@ def layout(service: LoLService) -> html.Div:
 
 
 def register_callbacks(app: Dash, service: LoLService) -> None:
-    @app.callback(Output("item-grid", "children"), Input("item-tag-filter", "value"))
-    def _update(selected_tags: list[str] | None):
+    @app.callback(
+        Output("item-grid", "children"),
+        Input("item-tag-filter", "value"),
+        Input("item-sort", "value"),
+    )
+    def _update(selected_tags: list[str] | None, sort_by: str | None):
         items = service.legendary_items()
         if selected_tags:
             items = [i for i in items if set(selected_tags) & set(i.get("tags", []))]
 
-        cards = []
+        rows = []
         for item in items:
             item_id = item["image"]["full"].rsplit(".", 1)[0]
-            icon_url = service.ddragon.item_icon_url(item_id)
             winrate = service.winrates.winrate_any("items", item_id)
+            rows.append((item, item_id, winrate))
+
+        sort_by = sort_by or "gold_desc"
+        if sort_by == "gold_asc":
+            rows.sort(key=lambda r: r[0]["gold"]["total"])
+        elif sort_by == "wr_desc":
+            # ítems sin muestra van al final, sin importar el sentido del orden
+            rows.sort(key=lambda r: r[2][0] if r[2] else -1, reverse=True)
+        elif sort_by == "wr_asc":
+            rows.sort(key=lambda r: r[2][0] if r[2] is not None else 101)
+        else:  # gold_desc, por defecto
+            rows.sort(key=lambda r: -r[0]["gold"]["total"])
+
+        cards = []
+        for item, item_id, winrate in rows:
+            icon_url = service.ddragon.item_icon_url(item_id)
             cards.append(_item_card(item_id, item, icon_url, winrate=winrate))
         return cards
 
