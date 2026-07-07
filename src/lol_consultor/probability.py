@@ -232,6 +232,38 @@ def suggest_secondary_runes(
     return suggestions[:top]
 
 
+@dataclass
+class MatchupResult:
+    champion_id: int
+    win_rate: float  # observado (sin suavizar): es justo lo que se vio en la muestra
+    games: int
+
+
+def best_matchups(
+    store: WinrateStore, champion_key: int, min_games: int = 3, top: int = 3
+) -> list[MatchupResult]:
+    """
+    Los matchups con mejor winrate observado del propio dataset recolectado.
+    op.gg solo expone los PEORES matchups (counters); esto cubre lo que
+    op.gg no da. min_games evita mostrar un 100% con una sola partida;
+    con poca muestra total, usa MIN_GAMES_FOR_DISPLAY en la UI para marcar
+    confiabilidad, no para ocultar el dato.
+    """
+    prefix = f"{champion_key}_vs_"
+    results = []
+    for key in store.keys_for_prefix("matchups", prefix):
+        games = store.games("matchups", key)
+        if games < min_games:
+            continue
+        winrate = store.winrate_any("matchups", key)
+        if winrate is None:
+            continue
+        enemy_id = int(key[len(prefix):])
+        results.append(MatchupResult(champion_id=enemy_id, win_rate=winrate[0], games=games))
+    results.sort(key=lambda r: -r.win_rate)
+    return results[:top]
+
+
 def entity_names_from_service(service: Any) -> tuple[dict[str, str], dict[str, str]]:
     """(nombres de ítems por id, nombres de runas por id) desde Data Dragon."""
     item_names = {iid: item["name"] for iid, item in service.ddragon.items().items()}

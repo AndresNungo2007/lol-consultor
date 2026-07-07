@@ -7,8 +7,10 @@ from typing import Any
 import dash_bootstrap_components as dbc
 from dash import Dash, Input, Output, dcc, html, no_update
 
+from lol_consultor.probability import best_matchups
 from lol_consultor.service import LoLService
 from lol_consultor.textutil import strip_tags
+from lol_consultor.winrates import MIN_GAMES_FOR_DISPLAY
 
 
 def layout(service: LoLService) -> html.Div:
@@ -55,12 +57,72 @@ def _ability_card(
     )
 
 
-def _meta_section(detail, champions_by_key: dict[int, dict[str, Any]]) -> html.Div:
+def _best_matchups_section(
+    service: LoLService, champion_key: int, champions_by_key: dict[int, dict[str, Any]]
+) -> html.Div | None:
+    """
+    Top matchups donde el campeón gana más, con datos propios recolectados
+    (Riot API). op.gg solo expone los peores matchups (counters); esto
+    cubre lo que a op.gg le falta. No está separado por rol porque la
+    recolección no registra en qué línea se jugó cada partida.
+    """
+    matchups = best_matchups(service.winrates, champion_key)
+    if not matchups:
+        return None
+
+    rows = []
+    for m in matchups:
+        rival = champions_by_key.get(m.champion_id)
+        rival_name = rival["name"] if rival else f"#{m.champion_id}"
+        reliable = m.games >= MIN_GAMES_FOR_DISPLAY
+        rows.append(
+            html.Tr(
+                [
+                    html.Td(rival_name),
+                    html.Td(f"{m.games} partidas" + ("" if reliable else " (muestra baja)")),
+                    html.Td(f"{m.win_rate}%"),
+                ]
+            )
+        )
+    return html.Div(
+        [
+            html.H6("Tus mejores matchups (datos propios, todas las partidas recolectadas)"),
+            dbc.Table(
+                [
+                    html.Thead(
+                        html.Tr(
+                            [
+                                html.Th("Rival"),
+                                html.Th("Partidas"),
+                                html.Th("Winrate del matchup"),
+                            ]
+                        )
+                    ),
+                    html.Tbody(rows),
+                ],
+                bordered=False,
+                size="sm",
+                striped=True,
+            ),
+        ],
+        className="mb-3",
+    )
+
+
+def _meta_section(
+    detail, service: LoLService, champion_key: int, champions_by_key: dict[int, dict[str, Any]]
+) -> html.Div:
+    best_section = _best_matchups_section(service, champion_key, champions_by_key)
     if detail.meta is None or not detail.meta.positions:
-        return dbc.Alert(
-            "Meta/counters de op.gg no disponible en este momento.",
-            color="warning",
-            class_name="mb-2",
+        return html.Div(
+            [
+                dbc.Alert(
+                    "Meta/counters de op.gg no disponible en este momento.",
+                    color="warning",
+                    class_name="mb-2",
+                ),
+                best_section or html.Div(),
+            ]
         )
 
     blocks = []
@@ -89,7 +151,11 @@ def _meta_section(detail, champions_by_key: dict[int, dict[str, Any]]) -> html.D
                         [
                             html.Thead(
                                 html.Tr(
-                                    [html.Th("Counter"), html.Th("Partidas"), html.Th("Tu winrate")]
+                                    [
+                                        html.Th("Counter"),
+                                        html.Th("Partidas"),
+                                        html.Th("Winrate del matchup"),
+                                    ]
                                 )
                             ),
                             html.Tbody(rows),
@@ -113,6 +179,7 @@ def _meta_section(detail, champions_by_key: dict[int, dict[str, Any]]) -> html.D
                 class_name="small mb-2",
             ),
             *blocks,
+            best_section or html.Div(),
         ]
     )
 
@@ -295,7 +362,9 @@ def register_callbacks(app: Dash, service: LoLService) -> None:
             class_name="mb-3",
         )
 
-        meta_section = _meta_section(detail, service.champions_by_key())
+        meta_section = _meta_section(
+            detail, service, int(data["key"]), service.champions_by_key()
+        )
 
         wiki_abilities_section = _wiki_abilities_section(detail, service, champion_id)
 
