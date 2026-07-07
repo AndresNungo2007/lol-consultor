@@ -1,7 +1,28 @@
 from __future__ import annotations
 
-from lol_consultor.probability import suggest_items, win_probability
+from lol_consultor.probability import suggest_items, suggest_secondary_runes, win_probability
 from lol_consultor.winrates import WinrateStore
+
+_RUNE_TREES = [
+    {
+        "id": 8000,
+        "name": "Precision",
+        "slots": [
+            {"runes": [{"id": 8005, "name": "Precision Keystone"}]},
+            {"runes": [{"id": 9101, "name": "Presencia de la mente"}]},
+            {"runes": [{"id": 9102, "name": "Leyenda: Alacridad"}]},
+            {"runes": [{"id": 9103, "name": "Golpe de gracia"}]},
+        ],
+    },
+    {
+        "id": 8100,
+        "name": "Dominación",
+        "slots": [
+            {"runes": [{"id": 8112, "name": "Electrocutar"}]},
+            {"runes": [{"id": 9201, "name": "Triunfo cazador"}]},
+        ],
+    },
+]
 
 
 def _store_with(tmp_path, records: dict[str, dict[str, list[int]]]) -> WinrateStore:
@@ -84,5 +105,59 @@ def test_suggest_items_requires_champion_usage(tmp_path):
     store = _store_with(tmp_path, {"items": {"3031": [100, 60]}})  # global, pero sin champ_items
 
     ranked = suggest_items(store, 234, enemy_keys=[], item_names={"3031": "Filo infinito"})
+
+    assert ranked == []
+
+
+def test_suggest_secondary_runes_stays_within_keystone_tree(tmp_path):
+    store = _store_with(
+        tmp_path,
+        {
+            "champ_runes": {
+                "234_9101": [40, 28],  # 70%, misma rama (Precision)
+                "234_9201": [40, 30],  # 75%, pero es de OTRA rama (Dominación)
+            },
+        },
+    )
+    rune_names = {
+        str(r["id"]): r["name"]
+        for tree in _RUNE_TREES
+        for slot in tree["slots"]
+        for r in slot["runes"]
+    }
+
+    ranked = suggest_secondary_runes(
+        store, 234, keystone_id="8005", rune_trees=_RUNE_TREES, rune_names=rune_names
+    )
+
+    ids = [s.entity_id for s in ranked]
+    assert "9201" not in ids  # de otra rama: no debe aparecer aunque tenga mejor winrate
+    assert "9101" in ids
+
+
+def test_suggest_secondary_runes_falls_back_to_global_without_champion_sample(tmp_path):
+    store = _store_with(tmp_path, {"runes": {"9102": [50, 30]}})  # 60% global, sin champ_runes
+    rune_names = {
+        str(r["id"]): r["name"]
+        for tree in _RUNE_TREES
+        for slot in tree["slots"]
+        for r in slot["runes"]
+    }
+
+    ranked = suggest_secondary_runes(
+        store, 234, keystone_id="8005", rune_trees=_RUNE_TREES, rune_names=rune_names
+    )
+
+    match = next(s for s in ranked if s.entity_id == "9102")
+    assert match.games == 50
+    assert 55 < match.score < 65
+
+
+def test_suggest_secondary_runes_unknown_keystone_returns_empty(tmp_path):
+    store = WinrateStore(tmp_path / "wr.json")
+
+    ranked = suggest_secondary_runes(
+        store, 234, keystone_id="99999", rune_trees=_RUNE_TREES, rune_names={}
+    )
 
     assert ranked == []

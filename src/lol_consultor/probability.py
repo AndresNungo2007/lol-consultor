@@ -187,12 +187,68 @@ def suggest_keystones(
     )
 
 
+def suggest_secondary_runes(
+    store: WinrateStore,
+    champion_key: int,
+    keystone_id: str,
+    rune_trees: list[dict[str, Any]],
+    rune_names: dict[str, str],
+    top: int = 2,
+) -> list[BuildSuggestion]:
+    """
+    Runas menores de la MISMA rama que `keystone_id` (slots 2-4 del árbol
+    primario), rankeadas por éxito del campeón con cada una. No hay dato
+    propio por matchup para estas runas (solo para la keystone), así que no
+    se ajusta contra enemigos específicos: usa champ_runes con respaldo en
+    el agregado global cuando el campeón aún no tiene muestra propia.
+    """
+    def _has_keystone(tree: dict[str, Any]) -> bool:
+        return any(str(r["id"]) == str(keystone_id) for r in tree["slots"][0]["runes"])
+
+    tree = next((t for t in rune_trees if _has_keystone(t)), None)
+    if tree is None:
+        return []
+    candidate_ids = [str(r["id"]) for slot in tree["slots"][1:] for r in slot["runes"]]
+
+    suggestions = []
+    for rid in candidate_ids:
+        if rid not in rune_names:
+            continue
+        champ_key = f"{champion_key}_{rid}"
+        champ_games = store.games("champ_runes", champ_key)
+        global_prior = store.smoothed("runes", rid, prior=0.5, k=_K_ITEM)
+        if champ_games > 0:
+            score = store.smoothed("champ_runes", champ_key, prior=global_prior, k=_K_ITEM)
+            games = champ_games
+        else:
+            score = global_prior
+            games = store.games("runes", rid)
+        suggestions.append(
+            BuildSuggestion(
+                entity_id=rid, name=rune_names[rid], score=round(score * 100, 1), games=games
+            )
+        )
+    suggestions.sort(key=lambda s: -s.score)
+    return suggestions[:top]
+
+
 def entity_names_from_service(service: Any) -> tuple[dict[str, str], dict[str, str]]:
     """(nombres de ítems por id, nombres de runas por id) desde Data Dragon."""
     item_names = {iid: item["name"] for iid, item in service.ddragon.items().items()}
-    keystone_names: dict[str, str] = {}
+    rune_names: dict[str, str] = {}
     for tree in service.rune_trees():
         for slot in tree["slots"]:
             for perk in slot["runes"]:
-                keystone_names[str(perk["id"])] = perk["name"]
-    return item_names, keystone_names
+                rune_names[str(perk["id"])] = perk["name"]
+    return item_names, rune_names
+
+
+def entity_icons_from_service(service: Any) -> tuple[dict[str, str], dict[str, str]]:
+    """(URL de ícono por id de ítem, URL de ícono por id de runa)."""
+    item_icons = {iid: service.ddragon.item_icon_url(iid) for iid in service.ddragon.items()}
+    rune_icons: dict[str, str] = {}
+    for tree in service.rune_trees():
+        for slot in tree["slots"]:
+            for perk in slot["runes"]:
+                rune_icons[str(perk["id"])] = service.ddragon.rune_icon_url(perk["icon"])
+    return item_icons, rune_icons

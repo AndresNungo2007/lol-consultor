@@ -8,10 +8,13 @@ from dash import Dash, Input, Output, State, dcc, html
 from lol_consultor import config
 from lol_consultor.draft import ROLES, DraftAnalyzer, DraftRecommendation
 from lol_consultor.probability import (
+    BuildSuggestion,
     WinProbability,
+    entity_icons_from_service,
     entity_names_from_service,
     suggest_items,
     suggest_keystones,
+    suggest_secondary_runes,
     win_probability,
 )
 from lol_consultor.service import LoLService
@@ -145,18 +148,42 @@ def _recommendation_card(
     )
 
 
+def _suggestion_bullet(suggestion: BuildSuggestion, icon_url: str | None, suffix: str) -> html.Li:
+    """Bullet con ícono pequeño + texto, para relacionar visualmente qué armar."""
+    content: list = []
+    if icon_url:
+        content.append(
+            html.Img(
+                src=icon_url,
+                height="24px",
+                className="me-2 rounded",
+                style={"verticalAlign": "middle"},
+            )
+        )
+    content.append(
+        f"{suggestion.name} — {suggestion.score}% ajustado ({suggestion.games} {suffix})"
+    )
+    return html.Li(content, className="small d-flex align-items-center mb-1")
+
+
 def _final_suggestion_card(
     service: LoLService,
     rec: DraftRecommendation,
     prob: WinProbability | None,
     enemy_keys: list[int],
 ) -> dbc.Card:
-    """Pick sugerido + build (ítems/runas) rankeado contra los enemigos elegidos."""
+    """Pick sugerido + build (top 3 ítems, keystone + 2 sub-runas) contra los enemigos elegidos."""
     champ = service.find_champion(rec.champion_id)
     champ_key = int(champ["key"]) if champ else 0
-    item_names, keystone_names = entity_names_from_service(service)
-    items = suggest_items(service.winrates, champ_key, enemy_keys, item_names)
-    keystones = suggest_keystones(service.winrates, champ_key, enemy_keys, keystone_names)
+    item_names, rune_names = entity_names_from_service(service)
+    item_icons, rune_icons = entity_icons_from_service(service)
+    items = suggest_items(service.winrates, champ_key, enemy_keys, item_names, top=3)
+    keystones = suggest_keystones(service.winrates, champ_key, enemy_keys, rune_names, top=1)
+    secondary_runes: list[BuildSuggestion] = []
+    if keystones:
+        secondary_runes = suggest_secondary_runes(
+            service.winrates, champ_key, keystones[0].entity_id, service.rune_trees(), rune_names
+        )
 
     children: list = [
         html.H5(
@@ -185,29 +212,26 @@ def _final_suggestion_card(
             )
         )
     if items:
-        children.append(html.H6("Ítems con mejor éxito en este matchup (tus datos):"))
+        children.append(html.H6("Top 3 ítems con mejor éxito en este matchup (tus datos):"))
         children.append(
             html.Ul(
                 [
-                    html.Li(
-                        f"{s.name} — {s.score}% ajustado ({s.games} partidas con este campeón)",
-                        className="small",
-                    )
+                    _suggestion_bullet(s, item_icons.get(s.entity_id), "partidas con este campeón")
                     for s in items
-                ]
+                ],
+                className="list-unstyled ps-2",
             )
         )
     if keystones:
-        children.append(html.H6("Runas clave con mejor éxito:"))
+        children.append(html.H6("Runa clave + sub-runas de su rama con mejor éxito:"))
         children.append(
             html.Ul(
-                [
-                    html.Li(
-                        f"{s.name} — {s.score}% ajustado ({s.games} partidas)",
-                        className="small",
-                    )
-                    for s in keystones
-                ]
+                [_suggestion_bullet(s, rune_icons.get(s.entity_id), "partidas") for s in keystones]
+                + [
+                    _suggestion_bullet(s, rune_icons.get(s.entity_id), "partidas")
+                    for s in secondary_runes
+                ],
+                className="list-unstyled ps-2",
             )
         )
     if not items and not keystones:
