@@ -15,6 +15,7 @@ from lol_consultor.probability import (
     win_probability,
 )
 from lol_consultor.service import LoLService
+from lol_consultor.winrates import MIN_GAMES_FOR_DISPLAY
 
 
 def _champion_options(service: LoLService) -> list[dict[str, str]]:
@@ -28,10 +29,15 @@ def layout(service: LoLService) -> html.Div:
     return html.Div(
         [
             dbc.Alert(
-                "Elige tu pool y rol, agrega los picks de aliados y enemigos a medida "
-                "que avanza la selección, y presiona Analizar. El puntaje combina meta "
-                "(winrate op.gg), counters contra los enemigos, balance de daño AP/AD y "
-                "composición del equipo.",
+                [
+                    "Elige tu pool y rol, agrega los picks de aliados y enemigos a medida "
+                    "que avanza la selección, y presiona Analizar. El orden de la lista usa "
+                    "un puntaje heurístico (meta de op.gg, counters, balance de daño, "
+                    "composición). La 'Prob. victoria' de cada tarjeta es un cálculo "
+                    "independiente sobre tus propias partidas recolectadas: con poca muestra "
+                    "(marcada como 'muestra baja') puede diferir bastante del puntaje — no es "
+                    "un error, es la incertidumbre real de pocos datos.",
+                ],
                 color="info",
                 class_name="small",
             ),
@@ -99,11 +105,17 @@ def _recommendation_card(
     color = "success" if rank == 1 else None
     prob_badge = None
     if prob is not None:
+        # La base del campeón (prob.champion_games) es la señal más importante:
+        # con muestra chica, la probabilidad puede alejarse mucho del score
+        # heurístico (que usa op.gg) sin que eso sea un error — es ruido
+        # estadístico. Se marca para que no se confunda con una certeza.
+        reliable = prob.champion_games >= MIN_GAMES_FOR_DISPLAY
+        label = f"Prob. victoria: {prob.probability}% (n={prob.champion_games})"
         prob_badge = dbc.Badge(
-            f"Prob. victoria: {prob.probability}%",
-            color="info",
+            label if reliable else f"{label} · muestra baja",
+            color="info" if reliable else "secondary",
             class_name="ms-2",
-            title=f"Evidencia: {prob.evidence_games} partidas propias",
+            title=f"Evidencia total (incl. matchups/dúos): {prob.evidence_games} partidas",
         )
     return dbc.Card(
         dbc.CardBody(
