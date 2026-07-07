@@ -14,7 +14,7 @@ def test_create_app_builds_layout_without_errors(stub_service, stub_assistant):
     assert app.layout is not None
 
 
-def test_meta_section_renders_counters_with_champion_names(sample_champion_list):
+def test_meta_section_renders_counters_with_champion_names(sample_champion_list, stub_service):
     champions_by_key = {int(c["key"]): c for c in sample_champion_list["data"].values()}
     counters = [CounterEntry(champion_id=103, games=100, wins=40)]
     position = PositionMeta(
@@ -23,15 +23,15 @@ def test_meta_section_renders_counters_with_champion_names(sample_champion_list)
     meta = ChampionMeta(champion_id=103, positions=[position])
     detail = ChampionDetail(data={}, meta=meta, patch_history=None)
 
-    section = _meta_section(detail, champions_by_key)
+    section = _meta_section(detail, stub_service, 103, champions_by_key)
 
     assert section is not None
 
 
-def test_meta_section_shows_warning_when_meta_unavailable():
+def test_meta_section_shows_warning_when_meta_unavailable(stub_service):
     detail = ChampionDetail(data={}, meta=None, patch_history=None)
 
-    section = _meta_section(detail, champions_by_key={})
+    section = _meta_section(detail, stub_service, 103, champions_by_key={})
 
     assert section is not None
 

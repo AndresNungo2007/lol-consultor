@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from lol_consultor.probability import suggest_items, suggest_secondary_runes, win_probability
+from lol_consultor.probability import (
+    best_matchups,
+    suggest_items,
+    suggest_secondary_runes,
+    win_probability,
+)
 from lol_consultor.winrates import WinrateStore
 
 _RUNE_TREES = [
@@ -161,3 +166,36 @@ def test_suggest_secondary_runes_unknown_keystone_returns_empty(tmp_path):
     )
 
     assert ranked == []
+
+
+def test_best_matchups_sorts_descending_and_respects_min_games(tmp_path):
+    store = WinrateStore(tmp_path / "wr.json")
+    for i in range(10):
+        store.record("matchups", "234_vs_157", won=i < 8)  # 80%, n=10
+    for _ in range(2):
+        store.record("matchups", "234_vs_64", won=True)  # 100%, n=2 (bajo el minimo)
+    for i in range(5):
+        store.record("matchups", "234_vs_99", won=i < 3)  # 60%, n=5
+
+    ranked = best_matchups(store, 234, min_games=3)
+
+    assert [r.champion_id for r in ranked] == [157, 99]  # 64 excluido por muestra chica
+    assert ranked[0].win_rate == 80.0
+    assert ranked[0].games == 10
+
+
+def test_best_matchups_respects_top_limit(tmp_path):
+    store = WinrateStore(tmp_path / "wr.json")
+    for enemy in [1, 2, 3, 4]:
+        for _ in range(5):
+            store.record("matchups", f"234_vs_{enemy}", won=True)
+
+    ranked = best_matchups(store, 234, min_games=3, top=2)
+
+    assert len(ranked) == 2
+
+
+def test_best_matchups_empty_without_data(tmp_path):
+    store = WinrateStore(tmp_path / "wr.json")
+
+    assert best_matchups(store, 234) == []
