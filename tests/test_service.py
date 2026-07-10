@@ -66,15 +66,36 @@ _ITEMS_WITH_VARIANTS = {
             "tags": ["SpellDamage"],
             "image": {"full": "1058.png"},
         },
-        # botas completas: debe excluirse por el tag Boots
-        "3117": {
-            "name": "Botas de movilidad",
+        # botas base (300 oro, raw sin componentes): debe excluirse
+        "1001": {
+            "name": "Botas",
             "description": "<stats>Movimiento</stats>",
-            "gold": {"total": 2000, "purchasable": True},
+            "gold": {"total": 300, "purchasable": True},
             "maps": {"11": True},
-            "from": ["1001"],
+            "into": ["3006"],
             "tags": ["Boots"],
-            "image": {"full": "3117.png"},
+            "image": {"full": "1001.png"},
+        },
+        # botas tier 2 (con componentes y con into: evolucionan): debe incluirse
+        "3006": {
+            "name": "Grebas de berserker",
+            "description": "<stats>Velocidad de ataque</stats>",
+            "gold": {"total": 1100, "purchasable": True},
+            "maps": {"11": True},
+            "from": ["1001", "1042"],
+            "into": ["3173"],
+            "tags": ["Boots"],
+            "image": {"full": "3006.png"},
+        },
+        # botas tier 3 evolucionadas (finales): debe incluirse
+        "3173": {
+            "name": "Trituradoras encadenadas",
+            "description": "<stats>Velocidad de ataque</stats>",
+            "gold": {"total": 1250, "purchasable": True},
+            "maps": {"11": True},
+            "from": ["3006"],
+            "tags": ["Boots"],
+            "image": {"full": "3173.png"},
         },
     }
 }
@@ -93,7 +114,16 @@ def test_legendary_items_prefers_base_id_and_filters(tmp_path, sample_version):
     items = service.legendary_items()
 
     by_name = {i["name"]: i for i in items}
-    # solo ítems compuestos, finales, no botas, no raw, sin duplicados
-    assert set(by_name) == {"Redención", "Filo infinito"}
+    # ítems completos + botas tier 2/3; sin raw, sin componentes, sin base 300g
+    assert set(by_name) == {
+        "Redención",
+        "Filo infinito",
+        "Grebas de berserker",
+        "Trituradoras encadenadas",
+    }
     # la variante de mapa se descarta: se conserva el ID base '3107'
     assert by_name["Redención"]["image"]["full"] == "3107.png"
+    # las botas tier 2 se muestran pese a tener 'into' (evolucionan)
+    assert by_name["Grebas de berserker"]["image"]["full"] == "3006.png"
+    # la base de botas de 300 oro (raw, sin 'from') no aparece
+    assert "Botas" not in by_name
