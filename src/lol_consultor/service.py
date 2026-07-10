@@ -126,29 +126,40 @@ class LoLService:
 
     def legendary_items(self) -> list[dict[str, Any]]:
         """
-        Ítems completos (>=2500 oro, sin upgrade posterior) de la Grieta del
-        Invocador. Data Dragon trae variantes del mismo ítem por mapa/modo
-        (ARAM, Arena...) con IDs distintos: se filtra por mapa 11 y se
-        deduplica por nombre para no mostrar repetidos.
+        Ítems completos de la Grieta del Invocador: compuestos (tienen
+        componentes, `from`), finales (sin `into`), comprables en el mapa 11,
+        y >=2000 oro (incluye ítems de soporte/apoyo como Redención o Solari,
+        que cuestan 2200-2450; excluye botas y componentes baratos).
+
+        Data Dragon trae variantes del mismo ítem por mapa/modo con IDs
+        distintos. Al deduplicar por nombre se PREFIERE el ID base (más corto):
+        las variantes llevan un prefijo de 2 dígitos (Redención base '3107' vs
+        variante '323107'). Riot reporta el ID base en las partidas, así que
+        mostrar la variante dejaba a esos ítems sin winrate aunque sí lo
+        tuvieran.
         """
-        candidates = sorted(
-            (
-                item
-                for item in self.ddragon.items().values()
-                if item.get("gold", {}).get("total", 0) >= 2500
-                and not item.get("into")
-                and item.get("maps", {}).get("11", False)
-                and item.get("gold", {}).get("purchasable", True)
-            ),
+        candidates = [
+            (item_id, item)
+            for item_id, item in self.ddragon.items().items()
+            if item.get("gold", {}).get("total", 0) >= 2000
+            and item.get("from")
+            and not item.get("into")
+            and item.get("maps", {}).get("11", False)
+            and item.get("gold", {}).get("purchasable", True)
+            and "Boots" not in item.get("tags", [])
+        ]
+        # Por nombre, quedarse con el ID base (el más corto): las variantes de
+        # mapa llevan un prefijo y a veces distinto precio, así que no se puede
+        # desempatar por oro. El ID base es el que Riot reporta en las partidas.
+        best_by_name: dict[str, tuple[str, dict[str, Any]]] = {}
+        for item_id, item in candidates:
+            current = best_by_name.get(item["name"])
+            if current is None or (len(item_id), item_id) < (len(current[0]), current[0]):
+                best_by_name[item["name"]] = (item_id, item)
+        return sorted(
+            (item for _id, item in best_by_name.values()),
             key=lambda i: -i["gold"]["total"],
         )
-        seen: set[str] = set()
-        unique = []
-        for item in candidates:
-            if item["name"] not in seen:
-                seen.add(item["name"])
-                unique.append(item)
-        return unique
 
     def rune_trees(self) -> list[dict[str, Any]]:
         return self.ddragon.runes()
