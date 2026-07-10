@@ -126,10 +126,14 @@ class LoLService:
 
     def legendary_items(self) -> list[dict[str, Any]]:
         """
-        Ítems completos de la Grieta del Invocador: compuestos (tienen
-        componentes, `from`), finales (sin `into`), comprables en el mapa 11,
-        y >=2000 oro (incluye ítems de soporte/apoyo como Redención o Solari,
-        que cuestan 2200-2450; excluye botas y componentes baratos).
+        Ítems mostrados en el catálogo de la Grieta del Invocador. Incluye:
+          - Ítems completos: compuestos (`from`), finales (sin `into`) y
+            >=2000 oro (cubre ítems de soporte como Redención o Solari,
+            2200-2450); excluye componentes baratos y raw.
+          - Botas comprables tier 2 y tier 3 (evolucionadas): botas con
+            componentes (`from`), lo que excluye la base 'Botas' de 300 oro
+            (raw). Se muestran aunque tengan `into` (las tier 2 evolucionan),
+            así que la restricción de 'sin into' NO aplica a las botas.
 
         Data Dragon trae variantes del mismo ítem por mapa/modo con IDs
         distintos. Al deduplicar por nombre se PREFIERE el ID base (más corto):
@@ -138,15 +142,23 @@ class LoLService:
         mostrar la variante dejaba a esos ítems sin winrate aunque sí lo
         tuvieran.
         """
+
+        def is_shown(item: dict[str, Any]) -> bool:
+            gold = item.get("gold", {})
+            if not (
+                item.get("from")
+                and item.get("maps", {}).get("11", False)
+                and gold.get("purchasable", True)
+            ):
+                return False
+            if "Boots" in item.get("tags", []):
+                return True  # tier 2 (con into) y tier 3; 'from' excluye la base
+            return not item.get("into") and gold.get("total", 0) >= 2000
+
         candidates = [
             (item_id, item)
             for item_id, item in self.ddragon.items().items()
-            if item.get("gold", {}).get("total", 0) >= 2000
-            and item.get("from")
-            and not item.get("into")
-            and item.get("maps", {}).get("11", False)
-            and item.get("gold", {}).get("purchasable", True)
-            and "Boots" not in item.get("tags", [])
+            if is_shown(item)
         ]
         # Por nombre, quedarse con el ID base (el más corto): las variantes de
         # mapa llevan un prefijo y a veces distinto precio, así que no se puede
