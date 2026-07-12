@@ -1,0 +1,9 @@
+# Dependencias para el despliegue en Streamlit Community Cloud.
+# Solo lo que necesita streamlit_app.py (la app Dash y sus deps se omiten:
+# no se usan en la nube). 'ollama' se incluye porque el paquete se importa
+# aunque el chat quede oculto sin un servidor Ollama al que conectarse.
+streamlit>=1.40
+requests>=2.31
+opgg.py>=2.0.4
+ollama>=0.5
+python-dotenv>=1.0

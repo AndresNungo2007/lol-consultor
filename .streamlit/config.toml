@@ -1,0 +1,10 @@
+# Tema Hextech: azul profundo + dorado, inspirado en el cliente de LoL.
+[theme]
+base = "dark"
+primaryColor = "#c8aa6e"
+backgroundColor = "#010a13"
+secondaryBackgroundColor = "#0a1428"
+textColor = "#f0e6d2"
+
+[server]
+headless = true

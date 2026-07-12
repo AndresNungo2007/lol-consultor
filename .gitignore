@@ -19,3 +19,6 @@ logs/
 
 # Config local de Claude Code (permisos específicos de esta máquina)
 .claude/settings.local.json
+
+# Secretos de Streamlit (nunca se commitean; el config.toml de tema sí)
+.streamlit/secrets.toml

@@ -1,9 +1,16 @@
 # LoL Consultor
 
-Interfaz de consulta (Dash) de League of Legends: campeones, ítems, runas,
-estilo de juego, meta/counters, análisis de draft, dinámicas del juego y un
-asistente de chat con IA local. Se mantiene actualizada sola: cachea por
-parche y revisa periódicamente si Riot publicó uno nuevo.
+Interfaz de consulta de League of Legends: campeones, ítems, runas, estilo de
+juego, meta/counters, análisis de draft, dinámicas del juego y un asistente de
+chat con IA local. Se mantiene actualizada sola: cachea por parche y revisa
+periódicamente si Riot publicó uno nuevo.
+
+Dos interfaces sobre la misma lógica de negocio:
+- **Dash** (`scripts/run_dash.py`): uso local completo, incluye el chat con
+  Ollama.
+- **Streamlit** (`streamlit_app.py`): pensada para desplegar en la nube
+  (Streamlit Community Cloud). El chat solo aparece si detecta Ollama, así que
+  en la nube queda oculto automáticamente.
 
 ## Fuentes de datos
 
@@ -37,10 +44,28 @@ pip install -e ".[dev]"
 ## Uso
 
 ```bash
-python scripts/run_dash.py
+python scripts/run_dash.py        # Dash, http://localhost:8050
+streamlit run streamlit_app.py    # Streamlit, http://localhost:8501
 ```
 
-Abre `http://localhost:8050`.
+## Despliegue en Streamlit Community Cloud
+
+La app Streamlit está lista para desplegarse gratis:
+
+1. Ve a [share.streamlit.io](https://share.streamlit.io) e inicia sesión con
+   GitHub.
+2. "New app" → repo `AndresNungo2007/lol-consultor`, rama `main`, archivo
+   `streamlit_app.py`.
+3. Deploy. No requiere secretos: los winrates se leen del agregado publicado
+   en la nube (rama `winrates-data`) y el resto son fuentes públicas.
+
+Notas del despliegue:
+- El **chat con IA queda oculto** en la nube (Ollama es local; sin GPU no
+  corre). Todo lo demás funciona igual.
+- El filesystem de la nube es efímero: en cada arranque en frío se
+  re-descarga Data Dragon (unos segundos) y se re-sincronizan los winrates.
+- `requirements.txt` trae solo lo que necesita Streamlit (Dash queda fuera
+  del despliegue).
 
 Variables de entorno disponibles en [.env.example](.env.example) (cópialo a
 `.env` para sobreescribir defaults).
