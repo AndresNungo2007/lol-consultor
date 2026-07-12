@@ -14,6 +14,7 @@ dependencies = [
     "dash>=2.17",
     "dash-bootstrap-components>=1.6",
     "plotly>=5.22",
+    "streamlit>=1.40",
     "opgg.py>=2.0.4",
     "ollama>=0.5",
     "python-dotenv>=1.0",
@@ -41,9 +42,16 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 ignore_missing_imports = true
 disallow_untyped_defs = false
+
+# No seguir a los stubs de librerías pesadas de terceros (streamlit arrastra
+# numpy/pandas, cuyos .pyi usan sintaxis que rompe el chequeo de nuestro código).
+[[tool.mypy.overrides]]
+module = ["streamlit.*", "numpy.*", "pandas.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
