@@ -18,6 +18,7 @@ from typing import Any
 from ollama import Client
 
 from lol_consultor import config
+from lol_consultor.ability_search import search_champion_abilities
 from lol_consultor.draft import DraftAnalyzer
 from lol_consultor.gamewiki import MECANICAS, buscar_mecanica
 from lol_consultor.service import LoLService
@@ -41,6 +42,13 @@ _SYSTEM_PROMPT = (
     "- Detalles FINOS de habilidades (resets, cifras por nivel, interacciones) "
     "-> habilidades_detalladas (fuente: wikilol, la más precisa)\n"
     "- Ítems -> buscar_items | runas -> arboles_runas | cambios de balance -> historial_parches\n"
+    "- '¿Qué CAMPEONES tienen habilidades que...?' / '¿cuáles campeones hacen X?' (preguntas "
+    "que abarcan MUCHOS campeones a la vez, no uno solo) -> buscar_habilidades_por_patron. "
+    "NUNCA intentes enumerar campeones o nombres de habilidades de memoria: con más de un par "
+    "de campeones, tu memoria mezcla habilidades entre campeones y te vas a equivocar. "
+    "Reporta ÚNICAMENTE los campeones que la tool devolvió, en los términos que use su "
+    "resultado (nombres de habilidades y campeones tal cual los reciba) y menciona la "
+    "cobertura si la tool la indica como parcial.\n"
     "Si la herramienta contradice lo que creías, la herramienta tiene razón. "
     "Si una herramienta no devuelve datos, dilo claramente; no inventes cifras. "
     "Si ni siquiera habilidades_detalladas menciona el detalle preguntado, responde que las "
@@ -97,8 +105,11 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
         "function": {
             "name": "buscar_items",
             "description": (
-                "Busca ítems legendarios por texto en su nombre o descripción "
-                "(ej. 'robo de vida', 'crítico', 'armadura')."
+                "Busca ítems legendarios por texto EXACTO en su nombre o descripción "
+                "(ej. 'robo de vida', 'crítico', 'armadura', 'vida máxima', 'vida actual', "
+                "'daño verdadero'). Es coincidencia literal de subcadena, no semántica: si el "
+                "primer intento no encuentra nada, prueba con otra frase corta y literal antes "
+                "de concluir que el ítem no existe (0 resultados NO confirma que no exista)."
             ),
             "parameters": {
                 "type": "object",
@@ -106,6 +117,29 @@ _TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "texto": {"type": "string", "description": "Texto a buscar"}
                 },
                 "required": ["texto"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "buscar_habilidades_por_patron",
+            "description": (
+                "Busca en las habilidades (pasiva y QWER) de TODOS los campeones un patrón de "
+                "texto, ej. 'vida máxima', 'vida actual', 'aturde', 'invisibilidad'. Úsala para "
+                "'¿qué campeones tienen habilidades que...?' — cualquier pregunta que abarque "
+                "muchos campeones a la vez. No la uses para preguntas sobre un solo campeón "
+                "(usa detalle_campeon o habilidades_detalladas en ese caso)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "patron": {
+                        "type": "string",
+                        "description": "Texto a buscar, en español, ej. 'vida máxima'",
+                    }
+                },
+                "required": ["patron"],
             },
         },
     },
@@ -281,6 +315,7 @@ class LoLAssistant:
             "detalle_campeon": self._detalle_campeon,
             "meta_campeon": self._meta_campeon,
             "buscar_items": self._buscar_items,
+            "buscar_habilidades_por_patron": self._buscar_habilidades_por_patron,
             "arboles_runas": self._arboles_runas,
             "historial_parches": self._historial_parches,
             "habilidades_detalladas": self._habilidades_detalladas,
@@ -367,7 +402,34 @@ class LoLAssistant:
                 matches.append(" — ".join(parts))
             if len(matches) >= 8:
                 break
-        return "\n".join(matches) if matches else f"No encontré ítems que mencionen '{texto}'."
+        if matches:
+            header = (
+                f"SÍ existen {len(matches)} ítem(s) que mencionan '{texto}' — repórtalos todos "
+                "en tu respuesta, son datos reales confirmados, no los descartes:"
+            )
+            return header + "\n" + "\n".join(matches)
+        return (
+            f"Ningún ítem tiene '{texto}' como subcadena literal (coincidencia exacta, no "
+            "semántica). Antes de concluir que no existe, vuelve a llamar a esta tool con una "
+            "frase corta distinta que Data Dragon podría usar para lo mismo."
+        )
+
+    def _buscar_habilidades_por_patron(self, patron: str) -> str:
+        result = search_champion_abilities(self.service, patron)
+        lines = [
+            f"Revisados {result.champions_checked} de {result.champions_total} campeones "
+            f"(los demás no están cacheados localmente aún)."
+            if not result.full_coverage
+            else f"Revisados los {result.champions_total} campeones."
+        ]
+        if not result.matches:
+            lines.append(f"Ningún campeón revisado tiene una habilidad que mencione '{patron}'.")
+            return "\n".join(lines)
+        for m in result.matches[:25]:
+            lines.append(f"{m.champion_name} — {m.slot}: {m.ability_name}: {m.snippet}")
+        if len(result.matches) > 25:
+            lines.append(f"... y {len(result.matches) - 25} más.")
+        return "\n".join(lines)
 
     def _arboles_runas(self) -> str:
         lines = []
