@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import html
 import re
+import time
 from collections.abc import Iterable
 from typing import Any
 
@@ -59,8 +60,20 @@ class LoLWikiConnector:
         # 'Vamp'); sin esto se parsea el stub "Redirect to: ..." en vez del
         # contenido real.
         params = {**params, "format": "json", "redirects": "1"}
-        r = self.session.get(WIKI_API, params=params, timeout=self.timeout)
-        r.raise_for_status()
+        try:
+            r = self.session.get(WIKI_API, params=params, timeout=self.timeout)
+            r.raise_for_status()
+        except requests.exceptions.RequestException:
+            # Un solo reintento: la API de MediaWiki devuelve 200 + un campo
+            # "error" para páginas inexistentes (no una excepción de red), así
+            # que llegar aquí siempre es un hipo transitorio (timeout, conexión),
+            # nunca "la página no existe". Sin esto, champion_detail() —que
+            # consulta esta fuente en paralelo con op.gg y el historial de
+            # parches— convertía cualquier lentitud momentánea en un falso
+            # "detalle de la wiki no disponible" para campeones que sí lo tienen.
+            time.sleep(0.5)
+            r = self.session.get(WIKI_API, params=params, timeout=self.timeout)
+            r.raise_for_status()
         return r.json()
 
     def page_section_text(self, title: str, heading_candidates: Iterable[str]) -> str | None:
