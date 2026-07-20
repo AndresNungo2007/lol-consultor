@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+import requests
 import responses
 
 from lol_consultor.cache import TTLCache
@@ -101,6 +103,40 @@ def test_champion_abilities_returns_detailed_section(tmp_path):
 
     assert result is not None
     assert "resets the cooldown" in result
+
+
+@responses.activate
+def test_get_retries_once_on_transient_network_error(tmp_path):
+    sections = [{"line": "Abilities", "index": "1"}]
+    text_by_index = {"1": "<p>contenido real</p>"}
+    calls = {"n": 0}
+
+    def _callback(request):
+        calls["n"] += 1
+        if calls["n"] == 1 and "prop=sections" in request.url:
+            raise requests.exceptions.ConnectionError("hipo de red")
+        return _callback_factory(sections, text_by_index)(request)
+
+    responses.add_callback(responses.GET, WIKI_API, callback=_callback)
+
+    connector = _connector(tmp_path)
+    result = connector.champion_abilities("Garen")
+
+    assert result is not None
+    assert "contenido real" in result
+
+
+@responses.activate
+def test_get_raises_after_second_failure(tmp_path):
+    def _callback(request):
+        raise requests.exceptions.ConnectionError("red caida de verdad")
+
+    responses.add_callback(responses.GET, WIKI_API, callback=_callback)
+
+    connector = _connector(tmp_path)
+
+    with pytest.raises(requests.exceptions.ConnectionError):
+        connector.champion_abilities("Garen")
 
 
 def test_strip_html_removes_tags_and_editsection_links():
