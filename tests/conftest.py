@@ -111,6 +111,9 @@ class StubDDragon:
     def champion(self, champion_id: str) -> dict:
         return SAMPLE_CHAMPION_DETAIL["data"][champion_id]
 
+    def champion_if_cached(self, champion_id: str) -> dict | None:
+        return SAMPLE_CHAMPION_DETAIL["data"].get(champion_id)
+
     def champion_square_url(self, full: str) -> str:
         return f"http://x/{full}"
 

@@ -117,6 +117,23 @@ class DDragonConnector:
         url = f"{DDRAGON}/cdn/{self.version}/data/{self.lang}/champion/{name}.json"
         return self._load_cached(f"champion_{name}.json", url)["data"][name]
 
+    def champion_if_cached(self, name: str) -> dict[str, Any] | None:
+        """
+        Como champion(), pero NUNCA descarga: None si ese campeón aún no está
+        en cache (memoria o disco) para el parche actual. Para búsquedas que
+        recorren todos los campeones, donde disparar ~170 descargas en una
+        sola consulta sería demasiado lento.
+        """
+        key = f"champion_{name}.json"
+        if key in self._cache:
+            return self._cache[key]["data"][name]
+        path = self._cache_path(key)
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        self._cache[key] = data
+        return data["data"][name]
+
     def items(self) -> dict[str, Any]:
         url = f"{DDRAGON}/cdn/{self.version}/data/{self.lang}/item.json"
         return self._load_cached("item.json", url)["data"]

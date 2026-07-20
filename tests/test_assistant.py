@@ -106,3 +106,27 @@ def test_status_message_when_model_missing(stub_service):
     status = assistant.status_message()
 
     assert status is not None and "ollama pull" in status
+
+
+def test_dispatch_routes_to_ability_pattern_search(stub_service):
+    assistant, _ = _assistant(stub_service, [])
+
+    result = assistant._dispatch("buscar_habilidades_por_patron", {"patron": "inflige daño"})
+
+    assert "Ahri" in result
+    assert "Orbe del engaño" in result
+
+
+def test_ask_uses_ability_search_tool_end_to_end(stub_service):
+    responses = [
+        _response(tool_calls=[_tool_call("buscar_habilidades_por_patron", {"patron": "daño"})]),
+        _response("Ahri tiene una habilidad que inflige daño: Orbe del engaño."),
+    ]
+    assistant, client = _assistant(stub_service, responses)
+
+    answer, _history = assistant.ask([], "¿Qué campeones tienen habilidades que hacen daño?")
+
+    assert "Ahri" in answer
+    tool_messages = [m for m in client.calls[1] if isinstance(m, dict) and m.get("role") == "tool"]
+    assert len(tool_messages) == 1
+    assert "Ahri" in tool_messages[0]["content"]

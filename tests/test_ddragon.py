@@ -43,6 +43,43 @@ def test_champion_detail(tmp_path, sample_version, sample_champion_detail):
 
 
 @responses.activate
+def test_champion_if_cached_returns_none_without_downloading(tmp_path, sample_version):
+    responses.add(responses.GET, f"{DDRAGON}/api/versions.json", json=[sample_version])
+    connector = DDragonConnector(lang="es_ES", cache_dir=tmp_path)
+
+    # sin registrar ninguna respuesta para champion/Ahri.json: si champion_if_cached
+    # intentara descargar, 'responses' lanzaría ConnectionError por la ruta no mockeada
+    result = connector.champion_if_cached("Ahri")
+
+    assert result is None
+
+
+@responses.activate
+def test_champion_if_cached_reads_disk_cache_after_first_fetch(
+    tmp_path, sample_version, sample_champion_detail
+):
+    responses.add(responses.GET, f"{DDRAGON}/api/versions.json", json=[sample_version])
+    connector = DDragonConnector(lang="es_ES", cache_dir=tmp_path)
+    responses.add(
+        responses.GET,
+        f"{DDRAGON}/cdn/{sample_version}/data/es_ES/champion/Ahri.json",
+        json=sample_champion_detail,
+    )
+    connector.champion("Ahri")  # descarga y cachea en disco
+
+    # segundo connector "en frío" (sin cache en memoria) sobre el mismo cache_dir
+    cold_connector = DDragonConnector(
+        lang="es_ES", cache_dir=tmp_path, version=sample_version, auto_update=False
+    )
+    responses.reset()  # cualquier intento de red ahora fallaría
+
+    result = cold_connector.champion_if_cached("Ahri")
+
+    assert result is not None
+    assert result["name"] == "Ahri"
+
+
+@responses.activate
 def test_items(tmp_path, sample_version, sample_items):
     responses.add(responses.GET, f"{DDRAGON}/api/versions.json", json=[sample_version])
     connector = DDragonConnector(lang="es_ES", cache_dir=tmp_path)
